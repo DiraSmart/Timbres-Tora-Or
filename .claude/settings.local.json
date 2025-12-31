@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m esptool:*)",
+      "Bash(pio run:*)"
+    ]
+  }
+}

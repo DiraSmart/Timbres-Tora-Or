@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración - Sistema de Timbres Tora Or</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+
+        .section h2 {
+            color: #667eea;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #cbd5e0;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #4a5568;
+            font-weight: 600;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .bell-test {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .bell-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: 600;
+        }
+
+        .bell-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .bell-btn:active {
+            transform: translateY(0);
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-success {
+            background: #48bb78;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+        }
+
+        .btn-secondary {
+            background: #4299e1;
+        }
+
+        .btn-secondary:hover {
+            background: #3182ce;
+        }
+
+        .btn-icon {
+            background: white;
+            color: #667eea;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+
+        .btn-icon:hover {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .time-display {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .time-info {
+            font-size: 1.2em;
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            margin: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            color: #667eea;
+            font-size: 1.5em;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #718096;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            z-index: 2000;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .notification.success {
+            background: #48bb78;
+        }
+
+        .notification.error {
+            background: #f56565;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8em;
+            }
+
+            .bell-test {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚙️ Configuración</h1>
+            <a href="/" class="btn btn-icon">← Volver a Horarios</a>
+        </header>
+
+        <div class="content">
+            <!-- Nombres de Timbres -->
+            <div class="section">
+                <h2>Nombres de Timbres</h2>
+                <form id="namesForm" onsubmit="saveBellNames(event)">
+                    <div class="form-group">
+                        <label>Timbre 1</label>
+                        <input type="text" id="bell0Name" required maxlength="30" placeholder="Ej: Timbre Entrada">
+                    </div>
+                    <div class="form-group">
+                        <label>Timbre 2</label>
+                        <input type="text" id="bell1Name" required maxlength="30" placeholder="Ej: Timbre Recreo">
+                    </div>
+                    <div class="form-group">
+                        <label>Timbre 3</label>
+                        <input type="text" id="bell2Name" required maxlength="30" placeholder="Ej: Timbre Salida">
+                    </div>
+                    <div class="form-group">
+                        <label>Timbre 4</label>
+                        <input type="text" id="bell3Name" required maxlength="30" placeholder="Ej: Timbre Emergencia">
+                    </div>
+                    <button type="submit" class="btn btn-success">Guardar Nombres</button>
+                </form>
+            </div>
+
+            <!-- Duración de Timbres -->
+            <div class="section">
+                <h2>Duración de Timbres</h2>
+                <p style="color: #718096; margin-bottom: 20px;">Configura cuánto tiempo sonará cada timbre (en segundos)</p>
+                <form id="durationsForm" onsubmit="saveBellDurations(event)">
+                    <div class="form-group">
+                        <label><span id="durationLabel0">Timbre 1</span></label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="number" id="bell0Duration" required min="0.1" max="60" step="0.1" placeholder="3.0" style="flex: 1;">
+                            <span style="color: #718096;">segundos</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><span id="durationLabel1">Timbre 2</span></label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="number" id="bell1Duration" required min="0.1" max="60" step="0.1" placeholder="3.0" style="flex: 1;">
+                            <span style="color: #718096;">segundos</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><span id="durationLabel2">Timbre 3</span></label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="number" id="bell2Duration" required min="0.1" max="60" step="0.1" placeholder="3.0" style="flex: 1;">
+                            <span style="color: #718096;">segundos</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><span id="durationLabel3">Timbre 4</span></label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="number" id="bell3Duration" required min="0.1" max="60" step="0.1" placeholder="3.0" style="flex: 1;">
+                            <span style="color: #718096;">segundos</span>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success">Guardar Duraciones</button>
+                </form>
+            </div>
+
+            <!-- Prueba de Timbres -->
+            <div class="section">
+                <h2>Prueba de Timbres</h2>
+                <p style="color: #718096; margin-bottom: 20px;">Presiona para activar cada timbre manualmente</p>
+                <div class="bell-test">
+                    <button class="bell-btn" onclick="testBell(0)">
+                        🔔 <span id="testBell0">Timbre 1</span>
+                    </button>
+                    <button class="bell-btn" onclick="testBell(1)">
+                        🔔 <span id="testBell1">Timbre 2</span>
+                    </button>
+                    <button class="bell-btn" onclick="testBell(2)">
+                        🔔 <span id="testBell2">Timbre 3</span>
+                    </button>
+                    <button class="bell-btn" onclick="testBell(3)">
+                        🔔 <span id="testBell3">Timbre 4</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sincronización de Hora -->
+            <div class="section">
+                <h2>Sincronización de Hora</h2>
+                <div class="time-display">
+                    <div>
+                        <div style="color: #718096; font-size: 0.9em; margin-bottom: 5px;">Hora Actual</div>
+                        <div class="time-info" id="currentTime">Cargando...</div>
+                    </div>
+                </div>
+                <div class="controls">
+                    <button class="btn btn-success" onclick="syncNTP()">🌐 Sincronizar con Internet (NTP)</button>
+                    <button class="btn btn-secondary" onclick="showSetTimeModal()">🕐 Configurar Manualmente</button>
+                </div>
+            </div>
+
+            <!-- Configuración WiFi -->
+            <div class="section">
+                <h2>Configuración WiFi</h2>
+                <div class="time-display" id="wifiStatus">
+                    <div>
+                        <div style="color: #718096; font-size: 0.9em; margin-bottom: 5px;">Estado WiFi</div>
+                        <div class="time-info">Cargando...</div>
+                    </div>
+                </div>
+                <div class="controls">
+                    <a href="/wifi_config.html" class="btn">📶 Cambiar WiFi</a>
+                </div>
+            </div>
+
+            <!-- Gestión de Usuarios -->
+            <div class="section">
+                <h2>👥 Gestión de Usuarios</h2>
+                <p style="color: #718096; margin-bottom: 20px;">Crea un usuario adicional para acceder al sistema. Solo el administrador puede crear usuarios.</p>
+
+                <div id="userInfo" style="background: #f7fafc; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <div style="color: #718096; font-size: 0.9em; margin-bottom: 10px;">Usuario Normal Configurado</div>
+                    <div id="userStatusText" style="font-size: 1.1em; font-weight: 600; color: #4a5568;">Cargando...</div>
+                </div>
+
+                <form id="userForm" onsubmit="saveNormalUser(event)">
+                    <div class="form-group">
+                        <label>Usuario</label>
+                        <input type="text" id="normalUsername" required minlength="3" maxlength="20" placeholder="Nombre de usuario">
+                    </div>
+                    <div class="form-group">
+                        <label>Contraseña</label>
+                        <input type="password" id="normalPassword" required minlength="4" maxlength="30" placeholder="Contraseña">
+                    </div>
+                    <div class="controls">
+                        <button type="submit" class="btn btn-success">💾 Guardar Usuario</button>
+                        <button type="button" class="btn" style="background: #f56565;" onclick="deleteNormalUser()">🗑️ Eliminar Usuario</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Backup/Restore del Sistema -->
+            <div class="section">
+                <h2>💾 Backup y Restauración</h2>
+                <p style="color: #718096; margin-bottom: 20px;">Crea copias de seguridad de toda la configuración del sistema o restaura desde un backup anterior.</p>
+
+                <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 10px; padding: 15px; margin-bottom: 20px;">
+                    <div style="color: #856404; font-weight: 600; margin-bottom: 5px;">⚠️ Importante</div>
+                    <div style="color: #856404; font-size: 0.9em;">
+                        El backup incluye: nombres de timbres, duraciones, horarios, configuración WiFi y usuario normal (contraseñas excluidas por seguridad).
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button class="btn btn-success" onclick="createBackup()">📥 Descargar Backup</button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('restoreFile').click()">📤 Restaurar Backup</button>
+                </div>
+                <input type="file" id="restoreFile" accept=".json" style="display: none;" onchange="restoreBackup(event)">
+            </div>
+
+            <!-- Actualización OTA -->
+            <div class="section">
+                <h2>🔄 Actualización de Firmware</h2>
+                <p style="color: #718096; margin-bottom: 20px;">Actualiza el firmware del dispositivo sin perder la configuración guardada.</p>
+
+                <div style="background: #e0f2fe; border: 2px solid #0284c7; border-radius: 10px; padding: 15px; margin-bottom: 20px;">
+                    <div style="color: #075985; font-weight: 600; margin-bottom: 5px;">ℹ️ Información</div>
+                    <div style="color: #075985; font-size: 0.9em;">
+                        La actualización OTA permite subir nuevo firmware (.bin) sin perder horarios, nombres de timbres, o configuración WiFi.
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <a href="/ota.html" class="btn" style="background: #0284c7;">🔄 Ir a Actualización OTA</a>
+                </div>
+            </div>
+
+            <!-- Visibilidad de Timbres -->
+            <div class="section">
+                <h2>👁️ Visibilidad de Timbres</h2>
+                <p style="color: #718096; margin-bottom: 20px;">Selecciona qué timbres deseas mostrar en el panel principal. Útil si solo tienes algunos timbres físicamente conectados.</p>
+
+                <form id="visibilityForm" onsubmit="saveBellVisibility(event)">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                        <div style="background: #f7fafc; padding: 15px; border-radius: 10px; border: 2px solid #e2e8f0;">
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="checkbox" id="bell0Visible" checked style="width: 20px; height: 20px; margin-right: 10px;">
+                                <span style="font-weight: 600; color: #4a5568;" id="visLabel0">Timbre 1</span>
+                            </label>
+                        </div>
+                        <div style="background: #f7fafc; padding: 15px; border-radius: 10px; border: 2px solid #e2e8f0;">
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="checkbox" id="bell1Visible" checked style="width: 20px; height: 20px; margin-right: 10px;">
+                                <span style="font-weight: 600; color: #4a5568;" id="visLabel1">Timbre 2</span>
+                            </label>
+                        </div>
+                        <div style="background: #f7fafc; padding: 15px; border-radius: 10px; border: 2px solid #e2e8f0;">
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="checkbox" id="bell2Visible" checked style="width: 20px; height: 20px; margin-right: 10px;">
+                                <span style="font-weight: 600; color: #4a5568;" id="visLabel2">Timbre 3</span>
+                            </label>
+                        </div>
+                        <div style="background: #f7fafc; padding: 15px; border-radius: 10px; border: 2px solid #e2e8f0;">
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="checkbox" id="bell3Visible" checked style="width: 20px; height: 20px; margin-right: 10px;">
+                                <span style="font-weight: 600; color: #4a5568;" id="visLabel3">Timbre 4</span>
+                            </label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success">Guardar Visibilidad</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para configurar hora manualmente -->
+    <div class="modal" id="timeModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Configurar Hora Manualmente</h3>
+                <button class="close-btn" onclick="closeTimeModal()">✕</button>
+            </div>
+            <form id="timeForm" onsubmit="setTime(event)">
+                <div class="form-group">
+                    <label>Fecha y Hora</label>
+                    <input type="datetime-local" id="datetimeInput" required>
+                </div>
+                <div class="controls">
+                    <button type="submit" class="btn btn-success">Guardar</button>
+                    <button type="button" class="btn" onclick="closeTimeModal()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let bellNames = ['Timbre 1', 'Timbre 2', 'Timbre 3', 'Timbre 4'];
+
+        // Verificar autenticación al cargar
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthentication();
+        });
+
+        // Verificar si el usuario está autenticado
+        async function checkAuthentication() {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth/check', {
+                    headers: {
+                        'Authorization': token
+                    }
+                });
+                const data = await response.json();
+
+                if (!data.authenticated) {
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('isAdmin');
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                // Usuario autenticado, inicializar la página
+                initializePage();
+            } catch (error) {
+                console.error('Error verificando autenticación:', error);
+                window.location.href = '/login.html';
+            }
+        }
+
+        // Inicializar página después de autenticación
+        function initializePage() {
+            loadBellNames();
+            loadBellDurations();
+            loadWiFiStatus();
+            loadNormalUserInfo();
+            loadBellVisibility();
+            updateCurrentTime();
+            setInterval(updateCurrentTime, 1000);
+            setInterval(loadWiFiStatus, 5000);
+        }
+
+        // Obtener token de autenticación
+        function getAuthToken() {
+            return localStorage.getItem('authToken');
+        }
+
+        // Cargar nombres de timbres
+        async function loadBellNames() {
+            try {
+                const response = await fetch('/api/bell-names', {
+                    headers: {
+                        'Authorization': getAuthToken()
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    bellNames = data.names || bellNames;
+
+                    // Actualizar campos del formulario
+                    for (let i = 0; i < 4; i++) {
+                        document.getElementById(`bell${i}Name`).value = bellNames[i];
+                        document.getElementById(`testBell${i}`).textContent = bellNames[i];
+                        document.getElementById(`durationLabel${i}`).textContent = bellNames[i];
+                    }
+                }
+            } catch (error) {
+                console.error('Error cargando nombres:', error);
+            }
+        }
+
+        // Guardar nombres de timbres
+        async function saveBellNames(event) {
+            event.preventDefault();
+
+            const names = [];
+            for (let i = 0; i < 4; i++) {
+                names.push(document.getElementById(`bell${i}Name`).value);
+            }
+
+            try {
+                const response = await fetch('/api/bell-names', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthToken()
+                    },
+                    body: JSON.stringify({ names: names })
+                });
+
+                if (response.ok) {
+                    bellNames = names;
+                    // Actualizar botones de prueba y etiquetas de duración
+                    for (let i = 0; i < 4; i++) {
+                        document.getElementById(`testBell${i}`).textContent = bellNames[i];
+                        document.getElementById(`durationLabel${i}`).textContent = bellNames[i];
+                    }
+                    showNotification('Nombres guardados correctamente', 'success');
+                } else {
+                    showNotification('Error guardando nombres', 'error');
+                }
+            } catch (error) {
+                showNotification('Error guardando nombres', 'error');
+                console.error(error);
+            }
+        }
+
+        // Cargar duraciones de timbres
+        async function loadBellDurations() {
+            try {
+                const response = await fetch('/api/bell-durations', {
+                    headers: {
+                        'Authorization': getAuthToken()
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const durations = data.durations || [3000, 3000, 3000, 3000];
+
+                    // Convertir de milisegundos a segundos y actualizar campos
+                    for (let i = 0; i < 4; i++) {
+                        const seconds = durations[i] / 1000;
+                        document.getElementById(`bell${i}Duration`).value = seconds;
+                    }
+                }
+            } catch (error) {
+                console.error('Error cargando duraciones:', error);
+            }
+        }
+
+        // Guardar duraciones de timbres
+        async function saveBellDurations(event) {
+            event.preventDefault();
+
+            const durations = [];
+            for (let i = 0; i < 4; i++) {
+                const seconds = parseFloat(document.getElementById(`bell${i}Duration`).value);
+                // Convertir de segundos a milisegundos
+                durations.push(Math.round(seconds * 1000));
+            }
+
+            try {
+                const response = await fetch('/api/bell-durations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthToken()
+                    },
+                    body: JSON.stringify({ durations: durations })
+                });
+
+                if (response.ok) {
+                    showNotification('Duraciones guardadas correctamente', 'success');
+                } else {
+                    showNotification('Error guardando duraciones', 'error');
+                }
+            } catch (error) {
+                showNotification('Error guardando duraciones', 'error');
+                console.error(error);
+            }
+        }
+
+        // Probar timbre
+        async function testBell(bellIndex) {
+            try {
+                const response = await fetch(`/api/test?bell=${bellIndex}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': getAuthToken()
+                    }
+                });
+
+                if (response.ok) {
+                    showNotification(`${bellNames[bellIndex]} activado`, 'success');
+                } else {
+                    showNotification('Error activando timbre', 'error');
+                }
+            } catch (error) {
+                showNotification('Error activando timbre', 'error');
+                console.error(error);
+            }
+        }
+
+        // Actualizar hora actual
+        async function updateCurrentTime() {
+            try {
+                const response = await fetch('/api/time', {
+                    headers: {
+                        'Authorization': getAuthToken()
+                    }
+                });
+                const data = await response.json();
+
+                const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                const timeStr = `${String(data.hour).padStart(2, '0')}:${String(data.minute).padStart(2, '0')}:${String(data.second).padStart(2, '0')}`;
+                const dateStr = `${days[data.dayOfWeek]}, ${data.day}/${data.month}/${data.year}`;
+
+                document.getElementById('currentTime').textContent = `${dateStr} - ${timeStr}`;
+            } catch (error) {
+                console.error('Error actualizando hora:', error);
+            }
+        }
+
+        // Cargar estado WiFi
+        async function loadWiFiStatus() {
+            try {
+                const response = await fetch('/api/wifi/status', {
+                    headers: {
+                        'Authorization': getAuthToken()
+                    }
+                });
+                const data = await response.json();
+
+                const wifiStatus = document.getElementById('wifiStatus');
+
+                if (data.connected) {
+                    wifiStatus.innerHTML = `
+                        <div>
+                            <div style="color: #718096; font-size: 0.9em; margin-bottom: 5px;">Estado WiFi</div>
+                            <div class="time-info">✓ Conectado a ${data.sta_ssid}</div>
+                            <div style="color: #718096; font-size: 0.9em; margin-top: 5px;">IP: ${data.sta_ip} | Señal: ${data.rssi} dBm</div>
+                        </div>
+                    `;
+                } else {
+                    wifiStatus.innerHTML = `
+                        <div>
+                            <div style="color: #718096; font-size: 0.9em; margin-bottom: 5px;">Estado WiFi</div>
+                            <div class="time-info">✗ Modo Access Point</div>
+                            <div style="color: #718096; font-size: 0.9em; margin-top: 5px;">AP IP: ${data.ap_ip}</div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error cargando estado WiFi:', error);
+            }
+        }
+
+        // Sincronizar con NTP
+        async function syncNTP() {
+            try {
+                const response = await fetch('/api/sync', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': getAuthToken()
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification('Hora sincronizada con Internet', 'success');
+                    updateCurrentTime();
+                } else {
+                    showNotification('Error: ' + (data.error || 'No se pudo sincronizar'), 'error');
+                }
+            } catch (error) {
+                showNotification('Error sincronizando con NTP', 'error');
+                console.error(error);
+            }
+        }
+
+        // Mostrar modal de configurar hora
+        function showSetTimeModal() {
+            const now = new Date();
+            const offset = now.getTimezoneOffset() * 60000;
+            const localISOTime = (new Date(now - offset)).toISOString().slice(0, 16);
+            document.getElementById('datetimeInput').value = localISOTime;
+            document.getElementById('timeModal').classList.add('active');
+        }
+
+        // Configurar hora manualmente
+        async function setTime(event) {
+            event.preventDefault();
+
+            const datetime = new Date(document.getElementById('datetimeInput').value);
+
+            const data = {
+                year: datetime.getFullYear(),
+                month: datetime.getMonth() + 1,
+                day: datetime.getDate(),
+                hour: datetime.getHours(),
+                minute: datetime.getMinutes(),
+                second: datetime.getSeconds()
+            };
+
+            try {
+                const response = await fetch('/api/time', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthToken()
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    showNotification('Hora configurada correctamente', 'success');
+                    closeTimeModal();
+                    updateCurrentTime();
+                } else {
+                    showNotification('Error configurando hora', 'error');
+                }
+            } catch (error) {
+                showNotification('Error configurando hora', 'error');
+                console.error(error);
+            }
+        }
+
+        // Cerrar modal
+        function closeTimeModal() {
+            document.getElementById('timeModal').classList.remove('active');
+        }
+
+        // Cargar información del usuario normal
+        async function loadNormalUserInfo() {
+            try {
+                const response = await fetch('/api/user/normal', {
+                    headers: {
+                        'Authorization': getAuthToken()
+                    }
+                });
+                const data = await response.json();
+
+                const statusText = document.getElementById('userStatusText');
+                const usernameInput = document.getElementById('normalUsername');
+                const passwordInput = document.getElementById('normalPassword');
+
+                if (data.configured) {
+                    statusText.textContent = `✓ Usuario: ${data.username}`;
+                    statusText.style.color = '#48bb78';
+                    usernameInput.value = data.username;
+                    passwordInput.value = '';
+                    passwordInput.placeholder = 'Dejar vacío para mantener contraseña actual';
+                    passwordInput.removeAttribute('required');
+                } else {
+                    statusText.textContent = '⚠️ No hay usuario configurado';
+                    statusText.style.color = '#f56565';
+                    usernameInput.value = '';
+                    passwordInput.value = '';
+                    passwordInput.placeholder = 'Contraseña';
+                    passwordInput.setAttribute('required', 'required');
+                }
+            } catch (error) {
+                console.error('Error cargando usuario:', error);
+            }
+        }
+
+        // Guardar usuario normal
+        async function saveNormalUser(event) {
+            event.preventDefault();
+
+            const username = document.getElementById('normalUsername').value;
+            const password = document.getElementById('normalPassword').value;
+
+            if (!password && !document.getElementById('userStatusText').textContent.includes('✓')) {
+                showNotification('Debe ingresar una contraseña', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/user/normal', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthToken()
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password || undefined
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification('Usuario guardado correctamente', 'success');
+                    loadNormalUserInfo();
+                } else {
+                    showNotification(data.error || 'Error guardando usuario', 'error');
+                }
+            } catch (error) {
+                showNotification('Error guardando usuario', 'error');
+                console.error(error);
+            }
+        }
+
+        // Eliminar usuario normal
+        async function deleteNormalUser() {
+            if (!confirm('¿Estás seguro de eliminar el usuario normal?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/user/normal', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthToken()
+                    },
+                    body: JSON.stringify({
+                        username: '',
+                        password: ''
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification('Usuario eliminado correctamente', 'success');
+                    loadNormalUserInfo();
+                } else {
+                    showNotification('Error eliminando usuario', 'error');
+                }
+            } catch (error) {
+                showNotification('Error eliminando usuario', 'error');
+                console.error(error);
+            }
+        }
+
+        // Mostrar notificación
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Cargar visibilidad de timbres
+        async function loadBellVisibility() {
+            try {
+                const response = await fetch('/api/bell-visibility', {
+                    headers: {
+                        'Authorization': getAuthToken()
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const visibility = data.visibility || [true, true, true, true];
+
+                    // Actualizar checkboxes
+                    for (let i = 0; i < 4; i++) {
+                        const checkbox = document.getElementById(`bell${i}Visible`);
+                        if (checkbox) {
+                            checkbox.checked = visibility[i];
+                        }
+                    }
+
+                    // Actualizar etiquetas con nombres de timbres
+                    for (let i = 0; i < 4; i++) {
+                        const label = document.getElementById(`visLabel${i}`);
+                        if (label) {
+                            label.textContent = bellNames[i];
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error cargando visibilidad:', error);
+            }
+        }
+
+        // Guardar visibilidad de timbres
+        async function saveBellVisibility(event) {
+            event.preventDefault();
+
+            const visibility = [];
+            for (let i = 0; i < 4; i++) {
+                visibility.push(document.getElementById(`bell${i}Visible`).checked);
+            }
+
+            // Validar que al menos un timbre esté visible
+            if (!visibility.some(v => v)) {
+                showNotification('Debes mostrar al menos un timbre', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/bell-visibility', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthToken()
+                    },
+                    body: JSON.stringify({ visibility: visibility })
+                });
+
+                if (response.ok) {
+                    showNotification('Visibilidad guardada correctamente', 'success');
+                } else {
+                    showNotification('Error guardando visibilidad', 'error');
+                }
+            } catch (error) {
+                showNotification('Error guardando visibilidad', 'error');
+                console.error(error);
+            }
+        }
+
+        // Crear backup del sistema
+        async function createBackup() {
+            try {
+                const response = await fetch('/api/backup', {
+                    headers: {
+                        'Authorization': getAuthToken()
+                    }
+                });
+
+                if (!response.ok) {
+                    showNotification('Error generando backup', 'error');
+                    return;
+                }
+
+                const data = await response.json();
+
+                // Crear archivo JSON para descarga
+                const dataStr = JSON.stringify(data, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+
+                // Generar nombre de archivo con fecha
+                const now = new Date();
+                const fileName = `tora-or-backup-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}.json`;
+
+                // Descargar archivo
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showNotification('Backup descargado correctamente', 'success');
+            } catch (error) {
+                console.error('Error creando backup:', error);
+                showNotification('Error creando backup', 'error');
+            }
+        }
+
+        // Restaurar backup del sistema
+        async function restoreBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Confirmar acción
+            if (!confirm('¿Estás seguro de restaurar este backup? Esto sobrescribirá toda la configuración actual.')) {
+                event.target.value = '';
+                return;
+            }
+
+            try {
+                const text = await file.text();
+                const backupData = JSON.parse(text);
+
+                const response = await fetch('/api/restore', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthToken()
+                    },
+                    body: JSON.stringify(backupData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showNotification('Backup restaurado correctamente. Recargando página...', 'success');
+
+                    // Recargar página después de 2 segundos
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    showNotification(result.error || 'Error restaurando backup', 'error');
+                }
+            } catch (error) {
+                console.error('Error restaurando backup:', error);
+                showNotification('Error restaurando backup: archivo inválido', 'error');
+            }
+
+            // Limpiar input de archivo
+            event.target.value = '';
+        }
+    </script>
+</body>
+</html>

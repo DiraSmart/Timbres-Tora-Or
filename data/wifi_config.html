@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración WiFi - Timbres Tora Or</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .status-card {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .status-card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .status-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+        }
+
+        .status-label {
+            color: #718096;
+            font-weight: 600;
+        }
+
+        .status-value {
+            color: #2d3748;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .status-badge.connected {
+            background: #48bb78;
+            color: white;
+        }
+
+        .status-badge.disconnected {
+            background: #ed8936;
+            color: white;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #4a5568;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #48bb78;
+        }
+
+        .btn-secondary:hover {
+            background: #38a169;
+        }
+
+        .network-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .network-item {
+            padding: 15px;
+            border-bottom: 1px solid #e2e8f0;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .network-item:hover {
+            background: #f7fafc;
+        }
+
+        .network-item:last-child {
+            border-bottom: none;
+        }
+
+        .network-item.selected {
+            background: #ebf4ff;
+            border-left: 4px solid #667eea;
+        }
+
+        .network-name {
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .network-signal {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .signal-icon {
+            font-size: 1.2em;
+        }
+
+        .signal-strong { color: #48bb78; }
+        .signal-medium { color: #ed8936; }
+        .signal-weak { color: #f56565; }
+
+        .lock-icon {
+            color: #718096;
+            margin-left: 10px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #718096;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            z-index: 2000;
+            animation: slideIn 0.3s ease-out;
+            max-width: 350px;
+        }
+
+        .notification.success {
+            background: #48bb78;
+        }
+
+        .notification.error {
+            background: #f56565;
+        }
+
+        .notification.info {
+            background: #4299e1;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .help-text {
+            color: #718096;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .link-button {
+            display: inline-block;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 15px;
+            transition: color 0.3s;
+        }
+
+        .link-button:hover {
+            color: #5568d3;
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.5em;
+            }
+
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Configuración WiFi</h1>
+            <p>Sistema de Timbres Escolares</p>
+        </header>
+
+        <div class="content">
+            <!-- Estado de conexión -->
+            <div class="status-card" id="statusCard">
+                <h3>Estado de Conexión</h3>
+                <div id="statusContent">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Cargando estado...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Escanear redes -->
+            <div class="section">
+                <h2>Seleccionar Red WiFi</h2>
+                <button class="btn btn-secondary" onclick="scanNetworks()">Escanear Redes WiFi</button>
+                <div id="networkList"></div>
+            </div>
+
+            <!-- Formulario de conexión -->
+            <div class="section">
+                <h2>Credenciales WiFi</h2>
+                <form id="wifiForm" onsubmit="saveWiFi(event)">
+                    <div class="form-group">
+                        <label>Nombre de Red (SSID)</label>
+                        <input type="text" id="ssid" required placeholder="Nombre de la red WiFi">
+                        <p class="help-text">Selecciona una red de arriba o escribe manualmente</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Contraseña</label>
+                        <input type="password" id="password" placeholder="Dejar vacío si no tiene contraseña">
+                        <p class="help-text">Contraseña de la red WiFi</p>
+                    </div>
+
+                    <button type="submit" class="btn" id="saveBtn">Guardar y Conectar</button>
+                </form>
+
+                <a href="/" class="link-button">Ir al Panel Principal</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedNetwork = null;
+
+        // Cargar estado inicial
+        document.addEventListener('DOMContentLoaded', function() {
+            loadWiFiStatus();
+            setInterval(loadWiFiStatus, 5000); // Actualizar cada 5 segundos
+        });
+
+        // Cargar estado WiFi
+        async function loadWiFiStatus() {
+            try {
+                const response = await fetch('/api/wifi/status');
+                const data = await response.json();
+
+                let statusHTML = '';
+
+                if (data.connected) {
+                    statusHTML = `
+                        <div class="status-info">
+                            <span class="status-label">Estado:</span>
+                            <span class="status-badge connected">Conectado</span>
+                        </div>
+                        <div class="status-info">
+                            <span class="status-label">Red:</span>
+                            <span class="status-value">${data.sta_ssid}</span>
+                        </div>
+                        <div class="status-info">
+                            <span class="status-label">IP:</span>
+                            <span class="status-value">${data.sta_ip}</span>
+                        </div>
+                        <div class="status-info">
+                            <span class="status-label">Señal:</span>
+                            <span class="status-value">${data.rssi} dBm</span>
+                        </div>
+                    `;
+                } else {
+                    statusHTML = `
+                        <div class="status-info">
+                            <span class="status-label">Estado:</span>
+                            <span class="status-badge disconnected">Desconectado</span>
+                        </div>
+                        <div class="status-info">
+                            <span class="status-label">Modo:</span>
+                            <span class="status-value">Access Point</span>
+                        </div>
+                        <div class="status-info">
+                            <span class="status-label">AP IP:</span>
+                            <span class="status-value">${data.ap_ip}</span>
+                        </div>
+                    `;
+
+                    if (data.saved_ssid) {
+                        statusHTML += `
+                            <div class="status-info">
+                                <span class="status-label">Red Guardada:</span>
+                                <span class="status-value">${data.saved_ssid}</span>
+                            </div>
+                            <p class="help-text" style="margin-top: 10px;">
+                                El sistema intentará reconectar cada 2 minutos
+                            </p>
+                        `;
+                    }
+                }
+
+                document.getElementById('statusContent').innerHTML = statusHTML;
+            } catch (error) {
+                console.error('Error cargando estado:', error);
+            }
+        }
+
+        // Escanear redes
+        async function scanNetworks() {
+            const networkList = document.getElementById('networkList');
+            networkList.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Escaneando redes WiFi...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/api/wifi/scan');
+                const networks = await response.json();
+
+                if (networks.length === 0) {
+                    networkList.innerHTML = '<p class="loading">No se encontraron redes</p>';
+                    return;
+                }
+
+                let html = '<div class="network-list">';
+
+                networks.forEach(network => {
+                    const rssi = network.rssi;
+                    let signalClass = 'signal-weak';
+                    let signalIcon = '▂';
+
+                    if (rssi > -60) {
+                        signalClass = 'signal-strong';
+                        signalIcon = '▂▄▆█';
+                    } else if (rssi > -70) {
+                        signalClass = 'signal-medium';
+                        signalIcon = '▂▄▆';
+                    }
+
+                    const lockIcon = network.encryption !== 'open' ? '🔒' : '';
+
+                    html += `
+                        <div class="network-item" onclick="selectNetwork('${network.ssid}')">
+                            <div>
+                                <span class="network-name">${network.ssid}</span>
+                                <span class="lock-icon">${lockIcon}</span>
+                            </div>
+                            <div class="network-signal">
+                                <span class="signal-icon ${signalClass}">${signalIcon}</span>
+                                <span>${rssi} dBm</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                networkList.innerHTML = html;
+
+                showNotification('Redes WiFi escaneadas', 'success');
+            } catch (error) {
+                networkList.innerHTML = '<p class="loading">Error escaneando redes</p>';
+                showNotification('Error escaneando redes', 'error');
+                console.error(error);
+            }
+        }
+
+        // Seleccionar red
+        function selectNetwork(ssid) {
+            selectedNetwork = ssid;
+            document.getElementById('ssid').value = ssid;
+
+            // Actualizar visualización
+            document.querySelectorAll('.network-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+
+            event.target.closest('.network-item').classList.add('selected');
+
+            showNotification(`Red seleccionada: ${ssid}`, 'info');
+
+            // Enfocar el campo de contraseña
+            document.getElementById('password').focus();
+        }
+
+        // Guardar configuración WiFi
+        async function saveWiFi(event) {
+            event.preventDefault();
+
+            const ssid = document.getElementById('ssid').value;
+            const password = document.getElementById('password').value;
+
+            if (!ssid) {
+                showNotification('Debes ingresar un SSID', 'error');
+                return;
+            }
+
+            const saveBtn = document.getElementById('saveBtn');
+            const originalText = saveBtn.textContent;
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Guardando...';
+
+            try {
+                const response = await fetch('/api/wifi/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        ssid: ssid,
+                        password: password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showNotification('¡Configuración guardada! Conectando...', 'success');
+
+                    // Esperar y recargar estado
+                    setTimeout(() => {
+                        loadWiFiStatus();
+                        saveBtn.disabled = false;
+                        saveBtn.textContent = originalText;
+                    }, 3000);
+                } else {
+                    showNotification('Error: ' + (data.error || 'No se pudo guardar'), 'error');
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = originalText;
+                }
+            } catch (error) {
+                showNotification('Error guardando configuración', 'error');
+                console.error(error);
+                saveBtn.disabled = false;
+                saveBtn.textContent = originalText;
+            }
+        }
+
+        // Mostrar notificación
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

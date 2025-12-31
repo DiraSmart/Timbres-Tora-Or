@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horarios - Sistema de Timbres</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .header-left h1 {
+            font-size: 2.5em;
+            margin-bottom: 5px;
+        }
+
+        .current-time {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-success {
+            background: #48bb78;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+        }
+
+        .btn-icon {
+            background: transparent;
+            color: white;
+            border: none;
+            padding: 10px;
+            font-size: 1.8em;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.7;
+            transition: all 0.3s;
+        }
+
+        .btn-icon:hover {
+            opacity: 1;
+            transform: rotate(90deg);
+        }
+
+        .bell-section {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+
+        .bell-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #cbd5e0;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .bell-header h2 {
+            color: #667eea;
+            font-size: 1.8em;
+            margin: 0;
+        }
+
+        .bell-header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .bell-count {
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .schedule-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .schedule-item {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            transition: all 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .schedule-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.1);
+        }
+
+        .schedule-info {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            flex: 1;
+        }
+
+        .info-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-label {
+            font-size: 0.85em;
+            color: #718096;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 1.2em;
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        .days-display {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        .day-badge {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 0.85em;
+            font-weight: 600;
+            background: #e2e8f0;
+            color: #a0aec0;
+        }
+
+        .day-badge.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .schedule-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.9em;
+        }
+
+        .btn-danger {
+            background: #f56565;
+        }
+
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+        }
+
+        .empty-state-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e0;
+            transition: .4s;
+            border-radius: 26px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #48bb78;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+
+        .master-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .master-toggle label {
+            font-size: 0.9em;
+            color: #4a5568;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .schedule-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle-label {
+            font-size: 0.85em;
+            color: #718096;
+            font-weight: 600;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            margin: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            color: #667eea;
+            font-size: 1.5em;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #718096;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #4a5568;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .days-selector {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .day-btn {
+            width: 45px;
+            height: 45px;
+            border: 2px solid #cbd5e0;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .day-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .day-btn:hover {
+            border-color: #667eea;
+        }
+
+        .bells-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .bell-btn {
+            padding: 12px 20px;
+            border: 2px solid #cbd5e0;
+            background: white;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.2s;
+            color: #4a5568;
+        }
+
+        .bell-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .bell-btn:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            z-index: 2000;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .notification.success {
+            background: #48bb78;
+        }
+
+        .notification.error {
+            background: #f56565;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .header-left h1 {
+                font-size: 1.8em;
+            }
+
+            .schedule-info {
+                gap: 15px;
+            }
+
+            .schedule-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .schedule-actions {
+                width: 100%;
+            }
+
+            .btn-small {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <h1>Sistema de Timbres Tora Or</h1>
+                <div class="current-time" id="currentTime">Cargando hora...</div>
+            </div>
+            <div class="header-right">
+                <a href="/config.html" class="btn btn-icon" id="configBtn" title="Configuración">⚙️</a>
+            </div>
+        </header>
+
+        <div class="content">
+            <!-- Controles principales -->
+            <div class="controls">
+                <button class="btn btn-success" onclick="showAddScheduleModal()">+ Agregar Horario</button>
+                <button class="btn" onclick="loadSchedules()">🔄 Recargar</button>
+                <div class="master-toggle" style="margin-left: auto;">
+                    <label class="switch">
+                        <input type="checkbox" id="globalMasterToggle" checked onchange="toggleAllSchedules()">
+                        <span class="slider"></span>
+                    </label>
+                    <label for="globalMasterToggle" style="margin-left: 10px; cursor: pointer;">Activar/Desactivar Todos</label>
+                </div>
+            </div>
+
+            <!-- Horarios Timbre 1 -->
+            <div class="bell-section" id="bellSection0">
+                <div class="bell-header">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <h2 id="bell0Name">Timbre 1</h2>
+                        <button class="btn btn-icon" onclick="showEditBellModal(0)" title="Editar nombre y duración">✏️</button>
+                    </div>
+                    <div class="bell-header-right">
+                        <span class="bell-count" id="bell0Count">0 horarios</span>
+                        <div class="master-toggle">
+                            <label class="switch">
+                                <input type="checkbox" id="bell0Master" checked onchange="toggleBellMaster(0)">
+                                <span class="slider"></span>
+                            </label>
+                            <label for="bell0Master">Todos</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="schedule-list" id="bell0Schedules">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔔</div>
+                        <p>No hay horarios configurados para este timbre</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Horarios Timbre 2 -->
+            <div class="bell-section" id="bellSection1">
+                <div class="bell-header">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <h2 id="bell1Name">Timbre 2</h2>
+                        <button class="btn btn-icon" onclick="showEditBellModal(1)" title="Editar nombre y duración">✏️</button>
+                    </div>
+                    <div class="bell-header-right">
+                        <span class="bell-count" id="bell1Count">0 horarios</span>
+                        <div class="master-toggle">
+                            <label class="switch">
+                                <input type="checkbox" id="bell1Master" checked onchange="toggleBellMaster(1)">
+                                <span class="slider"></span>
+                            </label>
+                            <label for="bell1Master">Todos</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="schedule-list" id="bell1Schedules">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔔</div>
+                        <p>No hay horarios configurados para este timbre</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Horarios Timbre 3 -->
+            <div class="bell-section" id="bellSection2">
+                <div class="bell-header">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <h2 id="bell2Name">Timbre 3</h2>
+                        <button class="btn btn-icon" onclick="showEditBellModal(2)" title="Editar nombre y duración">✏️</button>
+                    </div>
+                    <div class="bell-header-right">
+                        <span class="bell-count" id="bell2Count">0 horarios</span>
+                        <div class="master-toggle">
+                            <label class="switch">
+                                <input type="checkbox" id="bell2Master" checked onchange="toggleBellMaster(2)">
+                                <span class="slider"></span>
+                            </label>
+                            <label for="bell2Master">Todos</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="schedule-list" id="bell2Schedules">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔔</div>
+                        <p>No hay horarios configurados para este timbre</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Horarios Timbre 4 -->
+            <div class="bell-section" id="bellSection3">
+                <div class="bell-header">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <h2 id="bell3Name">Timbre 4</h2>
+                        <button class="btn btn-icon" onclick="showEditBellModal(3)" title="Editar nombre y duración">✏️</button>
+                    </div>
+                    <div class="bell-header-right">
+                        <span class="bell-count" id="bell3Count">0 horarios</span>
+                        <div class="master-toggle">
+                            <label class="switch">
+                                <input type="checkbox" id="bell3Master" checked onchange="toggleBellMaster(3)">
+                                <span class="slider"></span>
+                            </label>
+                            <label for="bell3Master">Todos</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="schedule-list" id="bell3Schedules">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔔</div>
+                        <p>No hay horarios configurados para este timbre</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para agregar/editar horario -->
+    <div class="modal" id="scheduleModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Agregar Horario</h3>
+                <button class="close-btn" onclick="closeScheduleModal()">✕</button>
+            </div>
+            <form id="scheduleForm" onsubmit="saveSchedule(event)">
+                <div class="form-group">
+                    <label>Nombre del Horario (opcional)</label>
+                    <input type="text" id="scheduleNameInput" maxlength="30" placeholder="Ej: Inicio de clases, Recreo, etc.">
+                </div>
+
+                <div class="form-group">
+                    <label id="bellsLabel">Timbres (selecciona uno o varios)</label>
+                    <div class="bells-selector">
+                        <button type="button" class="bell-btn" data-bell="0" id="bellBtn0">Timbre 1</button>
+                        <button type="button" class="bell-btn" data-bell="1" id="bellBtn1">Timbre 2</button>
+                        <button type="button" class="bell-btn" data-bell="2" id="bellBtn2">Timbre 3</button>
+                        <button type="button" class="bell-btn" data-bell="3" id="bellBtn3">Timbre 4</button>
+                    </div>
+                    <small id="bellsHint" style="color: #718096; margin-top: 5px; display: block;">💡 Puedes seleccionar varios timbres para crear el mismo horario en todos</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Hora</label>
+                    <input type="time" id="timeInput" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Días de la semana</label>
+                    <div class="days-selector">
+                        <button type="button" class="day-btn" data-day="0">L</button>
+                        <button type="button" class="day-btn" data-day="1">M</button>
+                        <button type="button" class="day-btn" data-day="2">X</button>
+                        <button type="button" class="day-btn" data-day="3">J</button>
+                        <button type="button" class="day-btn" data-day="4">V</button>
+                        <button type="button" class="day-btn" data-day="5">S</button>
+                        <button type="button" class="day-btn" data-day="6">D</button>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button type="submit" class="btn btn-success">Guardar</button>
+                    <button type="button" class="btn" onclick="closeScheduleModal()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para editar timbre -->
+    <div class="modal" id="editBellModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Editar Timbre</h3>
+                <button class="close-btn" onclick="closeEditBellModal()">✕</button>
+            </div>
+            <form id="editBellForm" onsubmit="saveEditBell(event)">
+                <div class="form-group">
+                    <label>Nombre del Timbre</label>
+                    <input type="text" id="bellNameInput" required maxlength="20" placeholder="Ej: Timbre 1, Campana Principal, etc.">
+                </div>
+
+                <div class="form-group">
+                    <label>Duración del Timbre (segundos)</label>
+                    <input type="number" id="bellDurationInput" required min="1" max="60" value="3">
+                    <small style="color: #718096; margin-top: 5px; display: block;">La duración que sonará el timbre (1-60 segundos)</small>
+                </div>
+
+                <div class="controls">
+                    <button type="submit" class="btn btn-success">Guardar</button>
+                    <button type="button" class="btn" onclick="closeEditBellModal()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let schedules = [];
+        let bellNames = ['Timbre 1', 'Timbre 2', 'Timbre 3', 'Timbre 4'];
+        let bellVisibility = [true, true, true, true];
+        let bellDurations = [3000, 3000, 3000, 3000];
+        let editingBellIndex = -1;
+        let editingScheduleId = -1;
+
+        // Verificar autenticación al cargar
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthentication();
+        });
+
+        // Verificar si el usuario está autenticado
+        async function checkAuthentication() {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth/check', {
+                    headers: {
+                        'Authorization': token
+                    }
+                });
+                const data = await response.json();
+
+                if (!data.authenticated) {
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('isAdmin');
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                // Usuario autenticado, inicializar la página
+                initializePage();
+            } catch (error) {
+                console.error('Error verificando autenticación:', error);
+                window.location.href = '/login.html';
+            }
+        }
+
+        // Inicializar página después de autenticación
+        async function initializePage() {
+            const isAdmin = localStorage.getItem('isAdmin') === 'true';
+
+            await loadBellNames();
+            await loadBellDurations();
+            await loadBellVisibility();
+            await loadSchedules();
+            updateCurrentTime();
+            setInterval(updateCurrentTime, 1000);
+
+            // Ocultar botón de configuración si no es admin
+            if (!isAdmin) {
+                const configBtn = document.getElementById('configBtn');
+                if (configBtn) {
+                    configBtn.style.display = 'none';
+                }
+            }
+
+            // Configurar botones de días
+            document.querySelectorAll('.day-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    this.classList.toggle('active');
+                });
+            });
+
+            // Configurar botones de timbres
+            document.querySelectorAll('.bell-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    this.classList.toggle('active');
+                    updateBellsSelectionHint();
+                });
+            });
+        }
+
+        // Actualizar hint de selección de timbres
+        function updateBellsSelectionHint() {
+            if (editingScheduleId >= 0) return; // No actualizar en modo edición
+
+            const selectedCount = document.querySelectorAll('.bell-btn.active').length;
+            const hint = document.getElementById('bellsHint');
+
+            if (selectedCount === 0) {
+                hint.innerHTML = '💡 Puedes seleccionar varios timbres para crear el mismo horario en todos';
+                hint.style.color = '#718096';
+            } else if (selectedCount === 1) {
+                hint.innerHTML = '✓ 1 timbre seleccionado';
+                hint.style.color = '#48bb78';
+            } else {
+                hint.innerHTML = `✓ ${selectedCount} timbres seleccionados - se creará el mismo horario en todos`;
+                hint.style.color = '#48bb78';
+            }
+        }
+
+        // Obtener token de autenticación
+        function getAuthToken() {
+            return localStorage.getItem('authToken');
+        }
+
+        // Cargar nombres de timbres
+        async function loadBellNames() {
+            try {
+                const response = await fetch('/api/bell-names', {
+                    headers: {
+                        'Authorization': getAuthToken()
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    bellNames = data.names || bellNames;
+                    updateBellNames();
+                }
+            } catch (error) {
+                console.error('Error cargando nombres:', error);
+            }
+        }
+
+        // Actualizar nombres en la interfaz
+        function updateBellNames() {
+            for (let i = 0; i < 4; i++) {
+                document.getElementById(`bell${i}Name`).textContent = bellNames[i];
+                // Actualizar botones del modal
+                const bellBtn = document.getElementById(`bellBtn${i}`);
+                if (bellBtn) {
+                    bellBtn.textContent = bellNames[i];
+                }
+            }
+        }
+
+        // Cargar duraciones de timbres
+        async function loadBellDurations() {
+            try {
+                const response = await fetch('/api/bell-durations', {
+                    headers: {
+                        'Authorization': getAuthToken()
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    bellDurations = data.durations || bellDurations;
+                }
+            } catch (error) {
+                console.error('Error cargando duraciones:', error);
+            }
+        }
+
+        // Mostrar modal de edición de timbre
+        function showEditBellModal(bellIndex) {
+            editingBellIndex = bellIndex;
+            document.getElementById('bellNameInput').value = bellNames[bellIndex];
+            document.getElementById('bellDurationInput').value = bellDurations[bellIndex] / 1000; // Convertir a segundos
+            document.getElementById('editBellModal').classList.add('active');
+        }
+
+        // Cerrar modal de edición de timbre
+        function closeEditBellModal() {
+            editingBellIndex = -1;
+            document.getElementById('editBellModal').classList.remove('active');
+            document.getElementById('editBellForm').reset();
+        }
+
+        // Guardar edición de timbre
+        async function saveEditBell(event) {
+            event.preventDefault();
+
+            if (editingBellIndex < 0) return;
+
+            const newName = document.getElementById('bellNameInput').value.trim();
+            const newDuration = parseInt(document.getElementById('bellDurationInput').value) * 1000; // Convertir a milisegundos
+
+            try {
+                // Guardar nombre
+                const updatedNames = [...bellNames];
+                updatedNames[editingBellIndex] = newName;
+
+                const nameResponse = await fetch('/api/bell-names', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthToken()
+                    },
+                    body: JSON.stringify({ names: updatedNames })
+                });
+
+                // Guardar duración
+                const updatedDurations = [...bellDurations];
+                updatedDurations[editingBellIndex] = newDuration;
+
+                const durationResponse = await fetch('/api/bell-durations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthToken()
+                    },
+                    body: JSON.stringify({ durations: updatedDurations })
+                });
+
+                if (nameResponse.ok && durationResponse.ok) {
+                    bellNames[editingBellIndex] = newName;
+                    bellDurations[editingBellIndex] = newDuration;
+                    updateBellNames();
+                    closeEditBellModal();
+                    showNotification('Timbre actualizado correctamente', 'success');
+                } else {
+                    showNotification('Error guardando cambios', 'error');
+                }
+            } catch (error) {
+                console.error('Error guardando timbre:', error);
+                showNotification('Error guardando cambios', 'error');
+            }
+        }
+
+        // Cargar visibilidad de timbres
+        async function loadBellVisibility() {
+            try {
+                const response = await fetch('/api/bell-visibility', {
+                    headers: {
+                        'Authorization': getAuthToken()
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    bellVisibility = data.visibility || [true, true, true, true];
+                    applyBellVisibility();
+                }
+            } catch (error) {
+                console.error('Error cargando visibilidad:', error);
+            }
+        }
+
+        // Aplicar visibilidad de timbres (ocultar/mostrar secciones)
+        function applyBellVisibility() {
+            for (let i = 0; i < 4; i++) {
+                const section = document.getElementById(`bellSection${i}`);
+                if (section) {
+                    section.style.display = bellVisibility[i] ? 'block' : 'none';
+                }
+
+                // También ocultar/mostrar botones de timbre en el modal
+                const bellBtn = document.getElementById(`bellBtn${i}`);
+                if (bellBtn) {
+                    bellBtn.style.display = bellVisibility[i] ? 'inline-block' : 'none';
+                }
+            }
+        }
+
+        // Actualizar hora actual
+        async function updateCurrentTime() {
+            try {
+                const response = await fetch('/api/time', {
+                    headers: {
+                        'Authorization': getAuthToken()
+                    }
+                });
+                const data = await response.json();
+
+                const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                const timeStr = `${String(data.hour).padStart(2, '0')}:${String(data.minute).padStart(2, '0')}:${String(data.second).padStart(2, '0')}`;
+                const dateStr = `${days[data.dayOfWeek]}, ${data.day}/${data.month}/${data.year}`;
+
+                document.getElementById('currentTime').textContent = `${dateStr} - ${timeStr}`;
+            } catch (error) {
+                console.error('Error actualizando hora:', error);
+            }
+        }
+
+        // Cargar horarios
+        async function loadSchedules() {
+            try {
+                const response = await fetch('/api/schedules', {
+                    headers: {
+                        'Authorization': getAuthToken()
+                    }
+                });
+                schedules = await response.json();
+                renderSchedules();
+            } catch (error) {
+                showNotification('Error cargando horarios', 'error');
+                console.error(error);
+            }
+        }
+
+        // Renderizar horarios por timbre
+        function renderSchedules() {
+            const dayNames = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+
+            // Agrupar horarios por timbre
+            const schedulesByBell = [[], [], [], []];
+            schedules.forEach((schedule, index) => {
+                schedule.id = index;
+                if (schedule.bell >= 0 && schedule.bell < 4) {
+                    schedulesByBell[schedule.bell].push(schedule);
+                }
+            });
+
+            // Renderizar cada timbre
+            for (let bellIndex = 0; bellIndex < 4; bellIndex++) {
+                const container = document.getElementById(`bell${bellIndex}Schedules`);
+                const countBadge = document.getElementById(`bell${bellIndex}Count`);
+                const bellSchedules = schedulesByBell[bellIndex];
+
+                countBadge.textContent = `${bellSchedules.length} horario${bellSchedules.length !== 1 ? 's' : ''}`;
+
+                // Actualizar estado del master toggle
+                const masterToggle = document.getElementById(`bell${bellIndex}Master`);
+                const allEnabled = bellSchedules.length > 0 && bellSchedules.every(s => s.enabled);
+                masterToggle.checked = allEnabled;
+
+                if (bellSchedules.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🔔</div>
+                            <p>No hay horarios configurados para este timbre</p>
+                        </div>
+                    `;
+                    continue;
+                }
+
+                container.innerHTML = bellSchedules.map(schedule => {
+                    const timeStr = `${String(schedule.hour).padStart(2, '0')}:${String(schedule.minute).padStart(2, '0')}`;
+
+                    const daysHTML = dayNames.map((day, i) =>
+                        `<span class="day-badge ${schedule.days[i] ? 'active' : ''}">${day}</span>`
+                    ).join('');
+
+                    const scheduleName = schedule.name || '';
+                    const nameHTML = scheduleName ? `
+                        <div class="info-group">
+                            <span class="info-label">Nombre</span>
+                            <span class="info-value" style="color: #667eea;">${scheduleName}</span>
+                        </div>
+                    ` : '';
+
+                    return `
+                        <div class="schedule-item" style="${!schedule.enabled ? 'opacity: 0.5;' : ''}">
+                            <div class="schedule-info">
+                                ${nameHTML}
+                                <div class="info-group">
+                                    <span class="info-label">Hora</span>
+                                    <span class="info-value">${timeStr}</span>
+                                </div>
+                                <div class="info-group">
+                                    <span class="info-label">Días</span>
+                                    <div class="days-display">${daysHTML}</div>
+                                </div>
+                                <div class="info-group">
+                                    <span class="info-label">Estado</span>
+                                    <div class="schedule-toggle">
+                                        <label class="switch">
+                                            <input type="checkbox" ${schedule.enabled ? 'checked' : ''} onchange="toggleSchedule(${schedule.id})">
+                                            <span class="slider"></span>
+                                        </label>
+                                        <span class="toggle-label">${schedule.enabled ? 'Activo' : 'Inactivo'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="schedule-actions">
+                                <button class="btn btn-small" onclick="editSchedule(${schedule.id})">Editar</button>
+                                <button class="btn btn-small btn-danger" onclick="deleteSchedule(${schedule.id})">Eliminar</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Aplicar visibilidad de timbres después de renderizar
+            applyBellVisibility();
+        }
+
+        // Activar/desactivar un horario individual
+        function toggleSchedule(id) {
+            schedules[id].enabled = !schedules[id].enabled;
+            saveAllSchedules();
+        }
+
+        // Activar/desactivar todos los horarios de un timbre
+        function toggleBellMaster(bellIndex) {
+            const masterToggle = document.getElementById(`bell${bellIndex}Master`);
+            const isEnabled = masterToggle.checked;
+
+            // Actualizar todos los horarios de este timbre
+            schedules.forEach(schedule => {
+                if (schedule.bell === bellIndex) {
+                    schedule.enabled = isEnabled;
+                }
+            });
+
+            saveAllSchedules();
+        }
+
+        // Activar/desactivar TODOS los horarios del sistema
+        function toggleAllSchedules() {
+            const globalToggle = document.getElementById('globalMasterToggle');
+            const isEnabled = globalToggle.checked;
+
+            // Actualizar todos los horarios
+            schedules.forEach(schedule => {
+                schedule.enabled = isEnabled;
+            });
+
+            // Actualizar todos los toggles de timbres individuales
+            for (let i = 0; i < 4; i++) {
+                const bellToggle = document.getElementById(`bell${i}Master`);
+                if (bellToggle) {
+                    bellToggle.checked = isEnabled;
+                }
+            }
+
+            saveAllSchedules();
+        }
+
+        // Mostrar modal de agregar horario
+        function showAddScheduleModal() {
+            editingScheduleId = -1;
+            document.getElementById('modalTitle').textContent = 'Agregar Horario';
+            document.getElementById('bellsLabel').textContent = 'Timbres (selecciona uno o varios)';
+            document.getElementById('bellsHint').style.display = 'block';
+            document.getElementById('scheduleForm').reset();
+            document.querySelectorAll('.day-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.bell-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('scheduleModal').classList.add('active');
+        }
+
+        // Editar horario
+        function editSchedule(id) {
+            editingScheduleId = id;
+            const schedule = schedules[id];
+
+            document.getElementById('modalTitle').textContent = 'Editar Horario';
+            document.getElementById('bellsLabel').textContent = 'Timbre';
+            document.getElementById('bellsHint').style.display = 'none';
+
+            // Limpiar selección de timbres
+            document.querySelectorAll('.bell-btn').forEach(btn => btn.classList.remove('active'));
+
+            // Seleccionar solo el timbre del horario
+            const bellBtn = document.querySelector(`.bell-btn[data-bell="${schedule.bell}"]`);
+            if (bellBtn) {
+                bellBtn.classList.add('active');
+            }
+
+            document.getElementById('scheduleNameInput').value = schedule.name || '';
+            document.getElementById('timeInput').value =
+                `${String(schedule.hour).padStart(2, '0')}:${String(schedule.minute).padStart(2, '0')}`;
+
+            document.querySelectorAll('.day-btn').forEach((btn, i) => {
+                if (schedule.days[i]) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            document.getElementById('scheduleModal').classList.add('active');
+        }
+
+        // Eliminar horario
+        function deleteSchedule(id) {
+            if (confirm('¿Estás seguro de eliminar este horario?')) {
+                schedules.splice(id, 1);
+                saveAllSchedules();
+            }
+        }
+
+        // Guardar horario
+        function saveSchedule(event) {
+            event.preventDefault();
+
+            // Obtener timbres seleccionados
+            const selectedBells = [];
+            document.querySelectorAll('.bell-btn').forEach(btn => {
+                if (btn.classList.contains('active')) {
+                    selectedBells.push(parseInt(btn.dataset.bell));
+                }
+            });
+
+            if (selectedBells.length === 0) {
+                alert('Debes seleccionar al menos un timbre');
+                return;
+            }
+
+            const scheduleName = document.getElementById('scheduleNameInput').value.trim();
+            const time = document.getElementById('timeInput').value.split(':');
+            const hour = parseInt(time[0]);
+            const minute = parseInt(time[1]);
+
+            const days = [];
+            document.querySelectorAll('.day-btn').forEach((btn, i) => {
+                days[i] = btn.classList.contains('active');
+            });
+
+            if (!days.some(d => d)) {
+                alert('Debes seleccionar al menos un día');
+                return;
+            }
+
+            if (editingScheduleId >= 0) {
+                // Modo edición: actualizar solo el horario existente
+                const schedule = {
+                    name: scheduleName,
+                    enabled: schedules[editingScheduleId].enabled,
+                    hour: hour,
+                    minute: minute,
+                    bell: selectedBells[0], // En modo edición solo se permite un timbre
+                    days: days
+                };
+                schedules[editingScheduleId] = schedule;
+            } else {
+                // Modo agregar: crear un horario por cada timbre seleccionado
+                selectedBells.forEach(bell => {
+                    const schedule = {
+                        name: scheduleName,
+                        enabled: true,
+                        hour: hour,
+                        minute: minute,
+                        bell: bell,
+                        days: days
+                    };
+                    schedules.push(schedule);
+                });
+            }
+
+            saveAllSchedules();
+            closeScheduleModal();
+        }
+
+        // Guardar todos los horarios
+        async function saveAllSchedules() {
+            try {
+                const response = await fetch('/api/schedules', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthToken()
+                    },
+                    body: JSON.stringify(schedules)
+                });
+
+                if (response.ok) {
+                    showNotification('Horarios guardados correctamente', 'success');
+                    renderSchedules();
+                } else {
+                    showNotification('Error guardando horarios', 'error');
+                }
+            } catch (error) {
+                showNotification('Error guardando horarios', 'error');
+                console.error(error);
+            }
+        }
+
+        // Cerrar modal
+        function closeScheduleModal() {
+            document.getElementById('scheduleModal').classList.remove('active');
+        }
+
+        // Mostrar notificación
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

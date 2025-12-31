@@ -1,0 +1,129 @@
+╔══════════════════════════════════════════════════════════════════╗
+║         DIAGRAMA DE CONEXIONES - Sistema de Timbres ESP32       ║
+╚══════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────┐
+│                         ESP32 DevKit                            │
+│                                                                 │
+│  3.3V ────────────────────────────┐                            │
+│  GND ──────────────────────┐      │                            │
+│  GPIO 21 (SDA) ─────┐      │      │                            │
+│  GPIO 22 (SCL) ─┐   │      │      │                            │
+│                 │   │      │      │                            │
+│  GPIO 13 ───────┼───┼──────┼──────┼─────┐                      │
+│  GPIO 12 ───────┼───┼──────┼──────┼─────┼─────┐                │
+│  GPIO 14 ───────┼───┼──────┼──────┼─────┼─────┼─────┐          │
+│  GPIO 27 ───────┼───┼──────┼──────┼─────┼─────┼─────┼─────┐    │
+│                 │   │      │      │     │     │     │     │    │
+│  5V/VIN ────────┼───┼──────┼──────┼─────┼─────┼─────┼─────┼──┐ │
+│  GND ───────────┼───┼──────┼──────┼─────┼─────┼─────┼─────┼──┤ │
+└─────────────────┼───┼──────┼──────┼─────┼─────┼─────┼─────┼──┼─┘
+                  │   │      │      │     │     │     │     │  │
+                  │   │      │      │     │     │     │     │  │
+      ┌───────────┘   │      │      │     │     │     │     │  │
+      │  ┌────────────┘      │      │     │     │     │     │  │
+      │  │      ┌────────────┘      │     │     │     │     │  │
+      │  │      │      ┌────────────┘     │     │     │     │  │
+      │  │      │      │                  │     │     │     │  │
+      ▼  ▼      ▼      ▼                  ▼     ▼     ▼     ▼  │
+   ┌─────────────────────┐          ┌──────────────────────────┐│
+   │   RTC DS3231        │          │   Módulo 4 Relés 5V     ││
+   │                     │          │                          ││
+   │  SCL ◄──────────────┤          │  IN1 ◄───────────────────┤│
+   │  SDA ◄──────────────┤          │  IN2 ◄───────────────────┤│
+   │  VCC ◄──────────────┤          │  IN3 ◄───────────────────┤│
+   │  GND ◄──────────────┘          │  IN4 ◄───────────────────┘│
+   │                     │          │  VCC ◄────────────────────┘
+   │ [CR2032 Battery]    │          │  GND ◄─────────────────────┐
+   └─────────────────────┘          │                            │
+                                    │  NO1  COM1  NC1            │
+                                    │   │    │     │             │
+                                    │  NO2  COM2  NC2            │
+                                    │   │    │     │             │
+                                    │  NO3  COM3  NC3            │
+                                    │   │    │     │             │
+                                    │  NO4  COM4  NC4            │
+                                    └───┼────┼─────┼─────────────┘
+                                        │    │     │
+                                        │    │     │
+                        ┌───────────────┴────┴─────┴────────────┐
+                        │                                        │
+                        │    Conexiones a los Timbres           │
+                        │                                        │
+                        │  Timbre 1: COM1 y NO1                 │
+                        │  Timbre 2: COM2 y NO2                 │
+                        │  Timbre 3: COM3 y NO3                 │
+                        │  Timbre 4: COM4 y NO4                 │
+                        │                                        │
+                        │  (Conectar según voltaje requerido)   │
+                        └────────────────────────────────────────┘
+
+╔══════════════════════════════════════════════════════════════════╗
+║                      NOTAS IMPORTANTES                           ║
+╚══════════════════════════════════════════════════════════════════╝
+
+1. PINES I2C (RTC):
+   - SDA: GPIO 21 (por defecto ESP32)
+   - SCL: GPIO 22 (por defecto ESP32)
+   - Alimentación: 3.3V desde ESP32
+   - Asegúrate de instalar la batería CR2032
+
+2. PINES DE RELÉS (configurables en código):
+   - Relé 1 (Timbre 1): GPIO 13
+   - Relé 2 (Timbre 2): GPIO 12
+   - Relé 3 (Timbre 3): GPIO 14
+   - Relé 4 (Timbre 4): GPIO 27
+
+3. ALIMENTACIÓN DEL MÓDULO DE RELÉS:
+   - Algunos módulos requieren 5V (usar pin VIN del ESP32)
+   - Otros funcionan con 3.3V
+   - Verifica las especificaciones de tu módulo
+
+4. TIPO DE ACTIVACIÓN:
+   - Este código usa HIGH para activar (relés activos en alto)
+   - Si tus relés son activos en BAJO, invierte HIGH/LOW en el código
+
+5. CONEXIÓN DE TIMBRES:
+   - Usa contacto NO (Normalmente Abierto) y COM
+   - NO se cierra cuando el relé activa
+   - NC (Normalmente Cerrado) se abre cuando el relé activa
+   - Respeta el voltaje de tus timbres (110V, 220V, 12V, etc.)
+
+6. SEGURIDAD ELÉCTRICA:
+   - Si trabajas con 110V/220V, usa precaución extrema
+   - Desconecta la alimentación antes de hacer cambios
+   - Considera usar un electricista certificado
+   - Los relés deben soportar el voltaje y corriente de tus timbres
+
+╔══════════════════════════════════════════════════════════════════╗
+║                    EJEMPLO DE MONTAJE                            ║
+╚══════════════════════════════════════════════════════════════════╝
+
+Opción 1: Timbres de 12V DC
+   [Fuente 12V] ─── (+) ──┬── COM1 ─ NO1 ─── Timbre 1 ─── GND
+                           ├── COM2 ─ NO2 ─── Timbre 2 ─── GND
+                           ├── COM3 ─ NO3 ─── Timbre 3 ─── GND
+                           └── COM4 ─ NO4 ─── Timbre 4 ─── GND
+
+Opción 2: Timbres de 110V AC (requiere experiencia eléctrica)
+   [110V AC] ─── Fase ──┬── COM1 ─ NO1 ─── Timbre 1 ─── Neutro
+                        ├── COM2 ─ NO2 ─── Timbre 2 ─── Neutro
+                        ├── COM3 ─ NO3 ─── Timbre 3 ─── Neutro
+                        └── COM4 ─ NO4 ─── Timbre 4 ─── Neutro
+
+   ⚠️ ADVERTENCIA: Trabajar con 110V/220V puede ser peligroso
+   ⚠️ Contrata un electricista si no tienes experiencia
+
+╔══════════════════════════════════════════════════════════════════╗
+║                  CHECKLIST DE CONEXIONES                         ║
+╚══════════════════════════════════════════════════════════════════╝
+
+□ RTC DS3231 conectado a SDA (GPIO 21) y SCL (GPIO 22)
+□ Batería CR2032 instalada en el RTC
+□ RTC alimentado con 3.3V y GND
+□ Módulo de relés conectado a GPIO 13, 12, 14, 27
+□ Módulo de relés alimentado (5V o 3.3V según modelo)
+□ GND común entre ESP32 y módulo de relés
+□ Timbres conectados a contactos NO y COM de cada relé
+□ Verificado el voltaje de los timbres
+□ Probado cada conexión antes de energizar

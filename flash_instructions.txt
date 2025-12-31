@@ -1,0 +1,172 @@
+================================================================
+   INSTRUCCIONES DE FLASHEO - Sistema de Timbres Tora Or
+================================================================
+
+MÉTODO 1: ESPHome Web (Recomendado - Más Fácil)
+================================================================
+
+1. Genera los archivos binarios:
+   - Ejecuta: build_binaries.bat
+   - O ejecuta: pio run && pio run --target buildfs
+
+2. Abre el flasheador web:
+   https://web.esphome.io/
+
+3. Conecta tu ESP32:
+   - Conecta el ESP32 via USB
+   - Click en "Connect"
+   - Selecciona el puerto COM del ESP32
+
+4. Flashea los archivos en este ORDEN y DIRECCIONES:
+
+   Dirección    Archivo                Descripción
+   ----------   -------------------    ---------------------------
+   0x1000       bootloader.bin         Bootloader del ESP32
+   0x8000       partitions.bin         Tabla de particiones
+   0xE000       boot_app0.bin          Inicializador de app
+   0x10000      firmware.bin           Tu programa principal
+   0x310000     littlefs.bin           Sistema de archivos (HTML)
+
+   IMPORTANTE: Respeta las direcciones exactamente como aparecen arriba
+
+5. Click en "Install" y espera a que termine
+
+6. El ESP32 se reiniciará automáticamente
+
+
+MÉTODO 2: esptool.py (Línea de comandos)
+================================================================
+
+Si tienes Python y esptool instalado:
+
+esptool.py --chip esp32 --port COMX --baud 921600 ^
+    --before default_reset --after hard_reset write_flash -z ^
+    --flash_mode dio --flash_freq 40m --flash_size detect ^
+    0x1000 binarios/bootloader.bin ^
+    0x8000 binarios/partitions.bin ^
+    0xe000 binarios/boot_app0.bin ^
+    0x10000 binarios/firmware.bin ^
+    0x310000 binarios/littlefs.bin
+
+(Reemplaza COMX con tu puerto COM, ejemplo: COM3)
+
+
+MÉTODO 3: PlatformIO (Si ya lo tienes instalado)
+================================================================
+
+Desde la carpeta del proyecto:
+
+1. Flashear firmware:
+   pio run --target upload
+
+2. Flashear sistema de archivos:
+   pio run --target uploadfs
+
+¡LISTO! Esto flashea todo automáticamente.
+
+
+SOLUCIÓN DE PROBLEMAS
+================================================================
+
+Error "Failed to connect":
+- Mantén presionado el botón BOOT del ESP32
+- Haz click en "Connect"
+- Suelta el botón cuando comience a flashear
+
+Error "Timeout":
+- Verifica que el cable USB soporte datos (no solo carga)
+- Prueba otro puerto USB
+- Instala drivers CH340 o CP2102 según tu ESP32
+
+Error al flashear littlefs.bin:
+- Asegúrate de haber ejecutado: pio run --target buildfs
+- Verifica que los archivos HTML estén en la carpeta data/
+
+ESP32 no arranca después de flashear:
+- Mantén presionado el botón BOOT
+- Presiona RESET una vez
+- Suelta BOOT
+- El ESP32 debería iniciar normalmente
+
+
+VERIFICACIÓN POST-FLASHEO
+================================================================
+
+1. Abre el Monitor Serial (115200 baud)
+
+2. Deberías ver:
+   === Sistema de Timbres Tora Or ===
+   === Con Captive Portal WiFi ===
+
+   Relés inicializados
+   RTC inicializado
+   Sistema de archivos inicializado
+   ...
+   Modo: Access Point
+   Conéctate a: Timbres-Escuela-Config
+   IP del AP: 192.168.4.1
+
+3. Conéctate al WiFi "Timbres-Escuela-Config" (contraseña: 12345678)
+
+4. Abre http://192.168.4.1/wifi_config.html para configurar WiFi
+
+5. Luego accede a http://192.168.4.1 para el panel principal
+
+
+ACTUALIZAR SOLO EL CÓDIGO (SIN PERDER CONFIGURACIÓN)
+================================================================
+
+Si solo cambias el código C++ pero NO los archivos HTML/web:
+
+Solo flashea firmware.bin en 0x10000
+
+Esto mantiene:
+- Configuración WiFi guardada
+- Nombres de timbres
+- Horarios programados
+- Sistema de archivos web
+
+
+ACTUALIZAR SOLO LOS ARCHIVOS WEB (SIN PERDER CONFIGURACIÓN)
+================================================================
+
+Si solo cambias archivos HTML/CSS/JS:
+
+Solo flashea littlefs.bin en 0x310000
+
+ADVERTENCIA: Esto BORRA la configuración WiFi y horarios guardados
+Para preservar configuración, haz backup antes con:
+  esptool.py --port COMX read_flash 0x310000 0x10000 backup_littlefs.bin
+
+
+RESETEO COMPLETO (BORRAR TODO)
+================================================================
+
+Para borrar completamente el ESP32:
+
+esptool.py --chip esp32 --port COMX erase_flash
+
+Luego flashea todos los archivos .bin de nuevo.
+
+
+INFORMACIÓN TÉCNICA
+================================================================
+
+Particiones del ESP32:
+- 0x1000    : Bootloader (4KB)
+- 0x8000    : Partition Table (4KB)
+- 0xE000    : Boot App0 (4KB)
+- 0x10000   : App0 (Firmware - 3MB)
+- 0x310000  : LittleFS (Archivos web - 64KB)
+
+Tamaño del firmware compilado: ~800KB
+Tamaño del sistema de archivos: ~20KB
+
+================================================================
+
+¿Necesitas ayuda?
+- Revisa el README.md para más información
+- Verifica conexiones hardware en DIAGRAMA_CONEXIONES.txt
+- Consulta la consola serial para mensajes de error
+
+================================================================
