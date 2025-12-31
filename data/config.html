@@ -545,7 +545,14 @@
                     return;
                 }
 
-                // Usuario autenticado, inicializar la página
+                // Verificar que sea administrador
+                const isAdmin = localStorage.getItem('isAdmin') === 'true';
+                if (!isAdmin) {
+                    window.location.href = '/';
+                    return;
+                }
+
+                // Usuario admin autenticado, inicializar la página
                 initializePage();
             } catch (error) {
                 console.error('Error verificando autenticación:', error);

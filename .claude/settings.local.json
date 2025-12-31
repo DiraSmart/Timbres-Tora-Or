@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(python -m esptool:*)",
-      "Bash(pio run:*)"
+      "Bash(pio run:*)",
+      "Bash(ls:*)"
     ]
   }
 }
