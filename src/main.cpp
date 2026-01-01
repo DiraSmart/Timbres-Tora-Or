@@ -18,7 +18,7 @@ const IPAddress ap_gateway(192, 168, 4, 1);
 const IPAddress ap_subnet(255, 255, 255, 0);
 
 // Pines de los relés (ajusta según tu configuración)
-const int RELAY_PINS[4] = {13, 12, 14, 27};
+const int RELAY_PINS[4] = {32, 33, 25, 26};
 String bellNames[4] = {"Timbre 1", "Timbre 2", "Timbre 3", "Timbre 4"};
 
 // Duración de cada timbre en milisegundos (por defecto 3 segundos cada uno)
