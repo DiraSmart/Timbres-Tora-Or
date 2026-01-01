@@ -3,7 +3,23 @@
     "allow": [
       "Bash(python -m esptool:*)",
       "Bash(pio run:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(gh release create:*)",
+      "Bash(\"releases/v1.0/tora-or-firmware-v1.0.bin\" )",
+      "Bash(\"releases/v1.0/tora-or-filesystem-v1.0.bin\" )",
+      "Bash(\"releases/v1.0/bootloader.bin\" )",
+      "Bash(\"releases/v1.0/partitions.bin\" )",
+      "Bash(\"releases/v1.0/INSTRUCCIONES.md\" )",
+      "Bash(pio device monitor:*)",
+      "Bash(timeout 10 pio device monitor:*)",
+      "Bash(exit 0)",
+      "Bash(timeout /t 5)",
+      "Bash(git add:*)",
+      "Bash(git push)",
+      "Bash(git commit:*)",
+      "Bash(cat:*)",
+      "Bash(git rm:*)",
+      "Bash(git pull:*)"
     ]
   }
 }
