@@ -59,15 +59,15 @@ SCL       →    GPIO 22 (SCL)
 Relé      →    ESP32
 VCC       →    5V o VIN (según tu módulo)
 GND       →    GND
-IN1       →    GPIO 13 (Timbre 1)
-IN2       →    GPIO 12 (Timbre 2)
-IN3       →    GPIO 14 (Timbre 3)
-IN4       →    GPIO 27 (Timbre 4)
+IN1       →    GPIO 32 (Timbre 1)
+IN2       →    GPIO 33 (Timbre 2)
+IN3       →    GPIO 25 (Timbre 3)
+IN4       →    GPIO 26 (Timbre 4)
 ```
 
 **Nota:** Puedes cambiar los pines en el archivo [src/main.cpp](src/main.cpp) en la línea:
 ```cpp
-const int RELAY_PINS[4] = {13, 12, 14, 27};
+const int RELAY_PINS[4] = {32, 33, 25, 26};
 ```
 
 ### Conexión de Timbres a los Relés
