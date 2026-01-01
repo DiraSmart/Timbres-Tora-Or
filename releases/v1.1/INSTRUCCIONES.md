@@ -9,6 +9,7 @@
 
 ## Archivos incluidos
 
+- `tora-or-complete-v1.1.bin` - **Archivo unificado (RECOMENDADO)** - Incluye todo en un solo archivo
 - `tora-or-firmware-v1.1.bin` - Firmware principal del sistema
 - `tora-or-filesystem-v1.1.bin` - Sistema de archivos con páginas web y logo
 - `bootloader.bin` - Bootloader del ESP32
@@ -16,12 +17,24 @@
 
 ## Instrucciones de instalación
 
-### Requisitos
+### Opción 1: ESPHome Web (MÁS FÁCIL) ⭐
+
+1. Ve a https://web.esphome.io/
+2. Conecta el ESP32 al puerto USB
+3. Haz clic en "Connect"
+4. Selecciona tu puerto COM
+5. Haz clic en "Install"
+6. Selecciona el archivo `tora-or-complete-v1.1.bin`
+7. Espera a que termine la instalación
+
+### Opción 2: Línea de comandos con archivo unificado
+
+#### Requisitos
 - ESP32 Dev Module
 - Cable USB
 - Python con esptool instalado
 
-### Instalación completa (primera vez)
+#### Instalación
 
 1. Conecta el ESP32 al puerto USB
 
@@ -34,12 +47,20 @@
 3. Ejecuta el siguiente comando (ajusta COM4 a tu puerto):
 
 ```bash
+python -m esptool --chip esp32 --port COM4 --baud 921600 write_flash -z 0x0 tora-or-complete-v1.1.bin
+```
+
+### Opción 3: Instalación por partes (avanzado)
+
+Si prefieres instalar cada componente por separado:
+
+```bash
 python -m esptool --chip esp32 --port COM4 --baud 921600 write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect 0x1000 bootloader.bin 0x8000 partitions.bin 0x10000 tora-or-firmware-v1.1.bin 0x290000 tora-or-filesystem-v1.1.bin
 ```
 
-### Actualización (si ya tienes una versión anterior)
+### Solo actualización de firmware y filesystem
 
-Solo necesitas actualizar el firmware y filesystem:
+Si solo quieres actualizar el firmware y filesystem sin tocar bootloader ni particiones:
 
 ```bash
 python -m esptool --chip esp32 --port COM4 --baud 921600 write_flash -z 0x10000 tora-or-firmware-v1.1.bin 0x290000 tora-or-filesystem-v1.1.bin
