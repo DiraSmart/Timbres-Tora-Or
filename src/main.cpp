@@ -1277,10 +1277,11 @@ void handleBackup() {
     doc["wifiConfigured"] = false;
   }
 
-  // Usuario normal (solo username, sin contraseña por seguridad)
+  // Usuario normal (incluye username y contraseña)
   if (normalUserConfigured) {
     doc["normalUserConfigured"] = true;
     doc["normalUsername"] = normalUser;
+    doc["normalPassword"] = normalPass;
   } else {
     doc["normalUserConfigured"] = false;
   }
@@ -1369,11 +1370,17 @@ void handleRestore() {
     }
   }
 
-  // Restaurar usuario normal (solo username, la contraseña debe ser reconfigurada)
+  // Restaurar usuario normal (username y contraseña)
   if (doc["normalUserConfigured"].as<bool>() && doc.containsKey("normalUsername")) {
     String username = doc["normalUsername"].as<String>();
-    if (username.length() > 0) {
-      Serial.printf("Usuario del backup: %s (contraseña debe ser reconfigurada)\n", username.c_str());
+    String password = doc["normalPassword"].as<String>();
+
+    if (username.length() > 0 && password.length() > 0) {
+      normalUser = username;
+      normalPass = password;
+      normalUserConfigured = true;
+      saveNormalUser(username, password);
+      Serial.printf("Usuario del backup restaurado: %s\n", username.c_str());
     }
   }
 
