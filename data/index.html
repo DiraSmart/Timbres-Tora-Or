@@ -38,7 +38,18 @@
             gap: 20px;
         }
 
-        .header-left h1 {
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .header-left img {
+            max-width: 80px;
+            height: auto;
+        }
+
+        .header-title h1 {
             font-size: 2.5em;
             margin-bottom: 5px;
         }
@@ -525,8 +536,11 @@
     <div class="container">
         <header>
             <div class="header-left">
-                <h1>Sistema de Timbres Tora Or</h1>
-                <div class="current-time" id="currentTime">Cargando hora...</div>
+                <img src="/Logo Tora Or transparente.png" alt="Logo Tora Or">
+                <div class="header-title">
+                    <h1>Sistema de Timbres Tora Or</h1>
+                    <div class="current-time" id="currentTime">Cargando hora...</div>
+                </div>
             </div>
             <div class="header-right">
                 <button class="btn btn-icon" id="configBtn" title="Configuración" onclick="navigateToConfig()">⚙️</button>

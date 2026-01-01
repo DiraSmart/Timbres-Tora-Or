@@ -38,6 +38,17 @@
             gap: 20px;
         }
 
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .header-content img {
+            max-width: 80px;
+            height: auto;
+        }
+
         header h1 {
             font-size: 2.5em;
         }
@@ -279,7 +290,10 @@
 <body>
     <div class="container">
         <header>
-            <h1>⚙️ Configuración</h1>
+            <div class="header-content">
+                <img src="/Logo Tora Or transparente.png" alt="Logo Tora Or">
+                <h1>⚙️ Configuración</h1>
+            </div>
             <a href="/" class="btn btn-icon">← Volver a Horarios</a>
         </header>
 
