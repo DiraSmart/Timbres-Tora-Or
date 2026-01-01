@@ -1287,12 +1287,19 @@ void handleBackup() {
     }
   }
 
-  // Configuración WiFi (SSID solamente, sin contraseña por seguridad)
+  // Configuración WiFi (incluye SSID y contraseña)
   if (wifiConfigured) {
     doc["wifiConfigured"] = true;
     doc["wifiSSID"] = saved_ssid;
+    doc["wifiPassword"] = saved_password;
   } else {
     doc["wifiConfigured"] = false;
+  }
+
+  // Visibilidad de timbres
+  JsonArray visibilityArray = doc["bellVisibility"].to<JsonArray>();
+  for (int i = 0; i < 4; i++) {
+    visibilityArray.add(bellVisibility[i]);
   }
 
   // Usuario normal (incluye username y contraseña)
@@ -1379,13 +1386,30 @@ void handleRestore() {
     saveSchedules();
   }
 
-  // Restaurar configuración WiFi (solo SSID, el usuario deberá reconfigurar la contraseña)
+  // Restaurar configuración WiFi (SSID y contraseña)
   if (doc["wifiConfigured"].as<bool>() && doc.containsKey("wifiSSID")) {
     String ssid = doc["wifiSSID"].as<String>();
+    String password = doc.containsKey("wifiPassword") ? doc["wifiPassword"].as<String>() : "";
+
     if (ssid.length() > 0) {
-      // Guardar solo el SSID, la contraseña debe ser reconfigurada por el usuario
-      Serial.printf("SSID del backup: %s (contraseña debe ser reconfigurada)\n", ssid.c_str());
+      saveWiFiConfig(ssid, password);
+      Serial.printf("WiFi del backup restaurado: %s\n", ssid.c_str());
+
+      // Intentar conectar
+      if (connectToWiFi()) {
+        Serial.println("Conectado exitosamente a WiFi restaurado");
+      }
     }
+  }
+
+  // Restaurar visibilidad de timbres
+  if (doc.containsKey("bellVisibility")) {
+    JsonArray visibilityArray = doc["bellVisibility"].as<JsonArray>();
+    for (int i = 0; i < 4 && i < visibilityArray.size(); i++) {
+      bellVisibility[i] = visibilityArray[i].as<bool>();
+    }
+    saveBellVisibility();
+    Serial.println("Visibilidad de timbres restaurada");
   }
 
   // Restaurar usuario normal (username y contraseña)
