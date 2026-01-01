@@ -284,67 +284,6 @@
         </header>
 
         <div class="content">
-            <!-- Nombres de Timbres -->
-            <div class="section">
-                <h2>Nombres de Timbres</h2>
-                <form id="namesForm" onsubmit="saveBellNames(event)">
-                    <div class="form-group">
-                        <label>Timbre 1</label>
-                        <input type="text" id="bell0Name" required maxlength="30" placeholder="Ej: Timbre Entrada">
-                    </div>
-                    <div class="form-group">
-                        <label>Timbre 2</label>
-                        <input type="text" id="bell1Name" required maxlength="30" placeholder="Ej: Timbre Recreo">
-                    </div>
-                    <div class="form-group">
-                        <label>Timbre 3</label>
-                        <input type="text" id="bell2Name" required maxlength="30" placeholder="Ej: Timbre Salida">
-                    </div>
-                    <div class="form-group">
-                        <label>Timbre 4</label>
-                        <input type="text" id="bell3Name" required maxlength="30" placeholder="Ej: Timbre Emergencia">
-                    </div>
-                    <button type="submit" class="btn btn-success">Guardar Nombres</button>
-                </form>
-            </div>
-
-            <!-- Duración de Timbres -->
-            <div class="section">
-                <h2>Duración de Timbres</h2>
-                <p style="color: #718096; margin-bottom: 20px;">Configura cuánto tiempo sonará cada timbre (en segundos)</p>
-                <form id="durationsForm" onsubmit="saveBellDurations(event)">
-                    <div class="form-group">
-                        <label><span id="durationLabel0">Timbre 1</span></label>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <input type="number" id="bell0Duration" required min="0.1" max="60" step="0.1" placeholder="3.0" style="flex: 1;">
-                            <span style="color: #718096;">segundos</span>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label><span id="durationLabel1">Timbre 2</span></label>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <input type="number" id="bell1Duration" required min="0.1" max="60" step="0.1" placeholder="3.0" style="flex: 1;">
-                            <span style="color: #718096;">segundos</span>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label><span id="durationLabel2">Timbre 3</span></label>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <input type="number" id="bell2Duration" required min="0.1" max="60" step="0.1" placeholder="3.0" style="flex: 1;">
-                            <span style="color: #718096;">segundos</span>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label><span id="durationLabel3">Timbre 4</span></label>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <input type="number" id="bell3Duration" required min="0.1" max="60" step="0.1" placeholder="3.0" style="flex: 1;">
-                            <span style="color: #718096;">segundos</span>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-success">Guardar Duraciones</button>
-                </form>
-            </div>
-
             <!-- Prueba de Timbres -->
             <div class="section">
                 <h2>Prueba de Timbres</h2>
@@ -545,14 +484,12 @@
                     return;
                 }
 
-                // Verificar que sea administrador
-                const isAdmin = localStorage.getItem('isAdmin') === 'true';
-                if (!isAdmin) {
-                    window.location.href = '/';
-                    return;
+                // Actualizar localStorage con el valor del API
+                if (data.isAdmin !== undefined) {
+                    localStorage.setItem('isAdmin', data.isAdmin ? 'true' : 'false');
                 }
 
-                // Usuario admin autenticado, inicializar la página
+                // Usuario autenticado, inicializar la página
                 initializePage();
             } catch (error) {
                 console.error('Error verificando autenticación:', error);
@@ -563,7 +500,6 @@
         // Inicializar página después de autenticación
         function initializePage() {
             loadBellNames();
-            loadBellDurations();
             loadWiFiStatus();
             loadNormalUserInfo();
             loadBellVisibility();
@@ -589,106 +525,17 @@
                     const data = await response.json();
                     bellNames = data.names || bellNames;
 
-                    // Actualizar campos del formulario
+                    // Actualizar botones de prueba y etiquetas de visibilidad
                     for (let i = 0; i < 4; i++) {
-                        document.getElementById(`bell${i}Name`).value = bellNames[i];
                         document.getElementById(`testBell${i}`).textContent = bellNames[i];
-                        document.getElementById(`durationLabel${i}`).textContent = bellNames[i];
+                        const visLabel = document.getElementById(`visLabel${i}`);
+                        if (visLabel) {
+                            visLabel.textContent = bellNames[i];
+                        }
                     }
                 }
             } catch (error) {
                 console.error('Error cargando nombres:', error);
-            }
-        }
-
-        // Guardar nombres de timbres
-        async function saveBellNames(event) {
-            event.preventDefault();
-
-            const names = [];
-            for (let i = 0; i < 4; i++) {
-                names.push(document.getElementById(`bell${i}Name`).value);
-            }
-
-            try {
-                const response = await fetch('/api/bell-names', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': getAuthToken()
-                    },
-                    body: JSON.stringify({ names: names })
-                });
-
-                if (response.ok) {
-                    bellNames = names;
-                    // Actualizar botones de prueba y etiquetas de duración
-                    for (let i = 0; i < 4; i++) {
-                        document.getElementById(`testBell${i}`).textContent = bellNames[i];
-                        document.getElementById(`durationLabel${i}`).textContent = bellNames[i];
-                    }
-                    showNotification('Nombres guardados correctamente', 'success');
-                } else {
-                    showNotification('Error guardando nombres', 'error');
-                }
-            } catch (error) {
-                showNotification('Error guardando nombres', 'error');
-                console.error(error);
-            }
-        }
-
-        // Cargar duraciones de timbres
-        async function loadBellDurations() {
-            try {
-                const response = await fetch('/api/bell-durations', {
-                    headers: {
-                        'Authorization': getAuthToken()
-                    }
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    const durations = data.durations || [3000, 3000, 3000, 3000];
-
-                    // Convertir de milisegundos a segundos y actualizar campos
-                    for (let i = 0; i < 4; i++) {
-                        const seconds = durations[i] / 1000;
-                        document.getElementById(`bell${i}Duration`).value = seconds;
-                    }
-                }
-            } catch (error) {
-                console.error('Error cargando duraciones:', error);
-            }
-        }
-
-        // Guardar duraciones de timbres
-        async function saveBellDurations(event) {
-            event.preventDefault();
-
-            const durations = [];
-            for (let i = 0; i < 4; i++) {
-                const seconds = parseFloat(document.getElementById(`bell${i}Duration`).value);
-                // Convertir de segundos a milisegundos
-                durations.push(Math.round(seconds * 1000));
-            }
-
-            try {
-                const response = await fetch('/api/bell-durations', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': getAuthToken()
-                    },
-                    body: JSON.stringify({ durations: durations })
-                });
-
-                if (response.ok) {
-                    showNotification('Duraciones guardadas correctamente', 'success');
-                } else {
-                    showNotification('Error guardando duraciones', 'error');
-                }
-            } catch (error) {
-                showNotification('Error guardando duraciones', 'error');
-                console.error(error);
             }
         }
 
@@ -721,6 +568,13 @@
                         'Authorization': getAuthToken()
                     }
                 });
+
+                if (!response.ok) {
+                    // Si no hay tiempo disponible, mostrar mensaje
+                    document.getElementById('currentTime').textContent = 'Hora no disponible (RTC no conectado)';
+                    return;
+                }
+
                 const data = await response.json();
 
                 const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -730,6 +584,7 @@
                 document.getElementById('currentTime').textContent = `${dateStr} - ${timeStr}`;
             } catch (error) {
                 console.error('Error actualizando hora:', error);
+                document.getElementById('currentTime').textContent = 'Hora no disponible';
             }
         }
 

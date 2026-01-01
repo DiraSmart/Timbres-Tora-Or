@@ -280,17 +280,31 @@ String generateToken() {
 }
 
 bool checkAuth() {
+  Serial.println("[DEBUG] checkAuth() iniciado");
+
   if (!server.hasHeader("Authorization")) {
+    Serial.println("[DEBUG] No hay header Authorization");
     return false;
   }
 
   String auth = server.header("Authorization");
-  if (auth != activeSession || millis() > sessionExpiry) {
+  Serial.printf("[DEBUG] Token recibido: %s\n", auth.c_str());
+  Serial.printf("[DEBUG] Token esperado: %s\n", activeSession.c_str());
+  Serial.printf("[DEBUG] Sesión expira en: %lu ms\n", sessionExpiry > millis() ? sessionExpiry - millis() : 0);
+
+  if (auth != activeSession) {
+    Serial.println("[DEBUG] Token no coincide");
+    return false;
+  }
+
+  if (millis() > sessionExpiry) {
+    Serial.println("[DEBUG] Sesión expirada");
     return false;
   }
 
   // Renovar sesión
   sessionExpiry = millis() + SESSION_DURATION;
+  Serial.println("[DEBUG] Autenticación exitosa");
   return true;
 }
 
@@ -685,11 +699,8 @@ void handleLoginPage() {
 }
 
 void handleConfig() {
-  if (!checkAdminAuth()) {
-    server.sendHeader("Location", "/");
-    server.send(302, "text/plain", "");
-    return;
-  }
+  // Servir config.html sin verificar auth en backend
+  // La verificación se hace en el frontend via /api/check-auth
   File file = LittleFS.open("/config.html", "r");
   if (!file) {
     server.send(404, "text/plain", "Archivo no encontrado");
@@ -1079,7 +1090,13 @@ void handleLogin() {
 // Verificar sesión
 void handleCheckAuth() {
   if (checkAuth()) {
-    server.send(200, "application/json", "{\"authenticated\":true}");
+    JsonDocument response;
+    response["authenticated"] = true;
+    response["isAdmin"] = activeSessionIsAdmin;
+
+    String responseStr;
+    serializeJson(response, responseStr);
+    server.send(200, "application/json", responseStr);
   } else {
     server.send(401, "application/json", "{\"authenticated\":false}");
   }
@@ -1632,6 +1649,11 @@ void handleOTAUpdate() {
 
 // Captive portal - redirigir todo al portal de configuración
 void handleNotFound() {
+  Serial.printf("[DEBUG] Ruta no encontrada: %s (Método: %s)\n",
+                server.uri().c_str(),
+                (server.method() == HTTP_GET) ? "GET" :
+                (server.method() == HTTP_POST) ? "POST" : "OTHER");
+
   if (currentMode == MODE_AP) {
     // Redirigir al portal de configuración WiFi
     server.sendHeader("Location", "http://192.168.4.1/wifi_config.html", true);

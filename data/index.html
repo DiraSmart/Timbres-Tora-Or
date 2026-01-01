@@ -529,7 +529,7 @@
                 <div class="current-time" id="currentTime">Cargando hora...</div>
             </div>
             <div class="header-right">
-                <a href="/config.html" class="btn btn-icon" id="configBtn" title="Configuración">⚙️</a>
+                <button class="btn btn-icon" id="configBtn" title="Configuración" onclick="navigateToConfig()">⚙️</button>
             </div>
         </header>
 
@@ -766,6 +766,11 @@
                     return;
                 }
 
+                // Actualizar isAdmin con el valor del API
+                if (data.isAdmin !== undefined) {
+                    localStorage.setItem('isAdmin', data.isAdmin ? 'true' : 'false');
+                }
+
                 // Usuario autenticado, inicializar la página
                 initializePage();
             } catch (error) {
@@ -831,6 +836,18 @@
         // Obtener token de autenticación
         function getAuthToken() {
             return localStorage.getItem('authToken');
+        }
+
+        // Navegar a configuración con autenticación
+        function navigateToConfig() {
+            const token = getAuthToken();
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            // Navegar directamente - config.html verificará el token desde localStorage
+            window.location.href = '/config.html';
         }
 
         // Cargar nombres de timbres
@@ -1029,6 +1046,18 @@
                 }
             });
 
+            // Ordenar horarios por hora dentro de cada timbre
+            schedulesByBell.forEach(bellSchedules => {
+                bellSchedules.sort((a, b) => {
+                    // Primero ordenar por hora
+                    if (a.hour !== b.hour) {
+                        return a.hour - b.hour;
+                    }
+                    // Si la hora es igual, ordenar por minuto
+                    return a.minute - b.minute;
+                });
+            });
+
             // Renderizar cada timbre
             for (let bellIndex = 0; bellIndex < 4; bellIndex++) {
                 const container = document.getElementById(`bell${bellIndex}Schedules`);
@@ -1070,6 +1099,15 @@
                     return `
                         <div class="schedule-item" style="${!schedule.enabled ? 'opacity: 0.5;' : ''}">
                             <div class="schedule-info">
+                                <div class="info-group">
+                                    <span class="toggle-label" style="display: block; text-align: center; margin-bottom: 8px; font-weight: 600;">${schedule.enabled ? 'Activo' : 'Inactivo'}</span>
+                                    <div class="schedule-toggle" style="justify-content: center;">
+                                        <label class="switch">
+                                            <input type="checkbox" ${schedule.enabled ? 'checked' : ''} onchange="toggleSchedule(${schedule.id})">
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
                                 ${nameHTML}
                                 <div class="info-group">
                                     <span class="info-label">Hora</span>
@@ -1078,16 +1116,6 @@
                                 <div class="info-group">
                                     <span class="info-label">Días</span>
                                     <div class="days-display">${daysHTML}</div>
-                                </div>
-                                <div class="info-group">
-                                    <span class="info-label">Estado</span>
-                                    <div class="schedule-toggle">
-                                        <label class="switch">
-                                            <input type="checkbox" ${schedule.enabled ? 'checked' : ''} onchange="toggleSchedule(${schedule.id})">
-                                            <span class="slider"></span>
-                                        </label>
-                                        <span class="toggle-label">${schedule.enabled ? 'Activo' : 'Inactivo'}</span>
-                                    </div>
                                 </div>
                             </div>
                             <div class="schedule-actions">
