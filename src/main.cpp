@@ -797,22 +797,40 @@ void handleSaveBellDurations() {
 }
 
 void handleScanNetworks() {
-  Serial.println("Escaneando redes WiFi...");
+  Serial.println("[WiFi Scan] Iniciando escaneo de redes...");
 
-  int n = WiFi.scanNetworks();
+  // Escanear redes (esto puede tardar varios segundos)
+  int n = WiFi.scanNetworks(false, true); // async=false, show_hidden=true
+
+  Serial.printf("[WiFi Scan] Escaneo completado. Redes encontradas: %d\n", n);
+
   JsonDocument doc;
   JsonArray networks = doc.to<JsonArray>();
 
-  for (int i = 0; i < n; i++) {
-    JsonObject network = networks.add<JsonObject>();
-    network["ssid"] = WiFi.SSID(i);
-    network["rssi"] = WiFi.RSSI(i);
-    network["encryption"] = (WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? "open" : "encrypted";
+  if (n == 0) {
+    Serial.println("[WiFi Scan] No se encontraron redes");
+  } else if (n > 0) {
+    for (int i = 0; i < n; i++) {
+      JsonObject network = networks.add<JsonObject>();
+      String ssid = WiFi.SSID(i);
+      int rssi = WiFi.RSSI(i);
+
+      network["ssid"] = ssid;
+      network["rssi"] = rssi;
+      network["encryption"] = (WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? "open" : "encrypted";
+
+      Serial.printf("[WiFi Scan] %d: %s (%d dBm)\n", i + 1, ssid.c_str(), rssi);
+    }
+  } else {
+    Serial.printf("[WiFi Scan] Error en el escaneo: código %d\n", n);
   }
 
   String response;
   serializeJson(doc, response);
   server.send(200, "application/json", response);
+
+  // Limpiar resultados del escaneo para liberar memoria
+  WiFi.scanDelete();
 }
 
 void handleSaveWiFi() {
