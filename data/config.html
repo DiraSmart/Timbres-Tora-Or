@@ -347,6 +347,72 @@
                 </div>
             </div>
 
+            <!-- Configuración MQTT / Home Assistant -->
+            <div class="section">
+                <h2>🏠 Integración MQTT / Home Assistant</h2>
+                <p style="color: #718096; margin-bottom: 20px;">Conecta el sistema con Home Assistant u otro broker MQTT para control remoto.</p>
+
+                <div id="mqttStatus" style="background: #f7fafc; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <div style="color: #718096; font-size: 0.9em; margin-bottom: 10px;">Estado MQTT</div>
+                    <div id="mqttStatusText" style="font-size: 1.1em; font-weight: 600; color: #4a5568;">Cargando...</div>
+                </div>
+
+                <form id="mqttForm" onsubmit="saveMQTTConfig(event)">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="mqttEnabled" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;">
+                            Habilitar MQTT
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Servidor MQTT</label>
+                        <input type="text" id="mqttServer" placeholder="192.168.1.10 o homeassistant.local">
+                        <div style="color: #718096; font-size: 0.85em; margin-top: 5px;">IP o hostname del broker MQTT (ej: Home Assistant)</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Puerto MQTT</label>
+                        <input type="number" id="mqttPort" value="1883" min="1" max="65535" placeholder="1883">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Usuario MQTT (opcional)</label>
+                        <input type="text" id="mqttUser" placeholder="Usuario del broker MQTT">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Contraseña MQTT (opcional)</label>
+                        <input type="password" id="mqttPassword" placeholder="Contraseña del broker MQTT">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Client ID</label>
+                        <input type="text" id="mqttClientId" value="timbres-tora-or" placeholder="timbres-tora-or">
+                        <div style="color: #718096; font-size: 0.85em; margin-top: 5px;">Identificador único en el broker MQTT</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="mqttHADiscovery" checked style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px;">
+                            Auto-descubrimiento Home Assistant
+                        </label>
+                        <div style="color: #718096; font-size: 0.85em; margin-top: 5px;">Permite que Home Assistant descubra automáticamente los dispositivos</div>
+                    </div>
+
+                    <div class="controls">
+                        <button type="submit" class="btn btn-success">💾 Guardar Configuración MQTT</button>
+                    </div>
+                </form>
+
+                <div style="background: #e0f2fe; border: 2px solid #0284c7; border-radius: 10px; padding: 15px; margin-top: 20px;">
+                    <div style="color: #075985; font-weight: 600; margin-bottom: 5px;">ℹ️ Documentación</div>
+                    <div style="color: #075985; font-size: 0.9em;">
+                        Consulta el archivo INTEGRACION_HOME_ASSISTANT.md en el repositorio para guía completa de configuración.
+                    </div>
+                </div>
+            </div>
+
             <!-- Gestión de Usuarios -->
             <div class="section">
                 <h2>👥 Gestión de Usuarios</h2>
@@ -381,7 +447,7 @@
                 <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 10px; padding: 15px; margin-bottom: 20px;">
                     <div style="color: #856404; font-weight: 600; margin-bottom: 5px;">⚠️ Importante</div>
                     <div style="color: #856404; font-size: 0.9em;">
-                        El backup incluye: nombres de timbres, duraciones, horarios, visibilidad de timbres, configuración WiFi completa (SSID y contraseña), y usuario normal con contraseña.
+                        El backup incluye: nombres de timbres, duraciones, horarios, visibilidad de timbres, configuración WiFi completa (SSID y contraseña), configuración MQTT (servidor, puerto, usuario y contraseña), y usuario normal con contraseña.
                     </div>
                 </div>
 
@@ -515,11 +581,13 @@
         function initializePage() {
             loadBellNames();
             loadWiFiStatus();
+            loadMQTTConfig();
             loadNormalUserInfo();
             loadBellVisibility();
             updateCurrentTime();
             setInterval(updateCurrentTime, 1000);
             setInterval(loadWiFiStatus, 5000);
+            setInterval(loadMQTTConfig, 5000);
         }
 
         // Obtener token de autenticación
@@ -819,6 +887,92 @@
         }
 
         // Mostrar notificación
+        // Cargar configuración MQTT
+        async function loadMQTTConfig() {
+            try {
+                const response = await fetch('/api/mqtt/config', {
+                    headers: {
+                        'Authorization': getAuthToken()
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+
+                    // Actualizar formulario
+                    document.getElementById('mqttEnabled').checked = data.enabled || false;
+                    document.getElementById('mqttServer').value = data.server || '';
+                    document.getElementById('mqttPort').value = data.port || 1883;
+                    document.getElementById('mqttUser').value = data.user || '';
+                    document.getElementById('mqttClientId').value = data.client_id || 'timbres-tora-or';
+                    document.getElementById('mqttHADiscovery').checked = data.ha_discovery !== false;
+
+                    // Actualizar estado
+                    const statusDiv = document.getElementById('mqttStatusText');
+                    if (data.enabled) {
+                        if (data.connected) {
+                            statusDiv.innerHTML = '✅ MQTT Conectado a ' + data.server;
+                            statusDiv.style.color = '#48bb78';
+                        } else {
+                            statusDiv.innerHTML = '❌ MQTT Habilitado pero no conectado';
+                            statusDiv.style.color = '#f56565';
+                        }
+                    } else {
+                        statusDiv.innerHTML = '⚪ MQTT Deshabilitado';
+                        statusDiv.style.color = '#a0aec0';
+                    }
+                }
+            } catch (error) {
+                console.error('Error cargando configuración MQTT:', error);
+            }
+        }
+
+        // Guardar configuración MQTT
+        async function saveMQTTConfig(event) {
+            event.preventDefault();
+
+            const config = {
+                enabled: document.getElementById('mqttEnabled').checked,
+                server: document.getElementById('mqttServer').value.trim(),
+                port: parseInt(document.getElementById('mqttPort').value) || 1883,
+                user: document.getElementById('mqttUser').value.trim(),
+                password: document.getElementById('mqttPassword').value,
+                client_id: document.getElementById('mqttClientId').value.trim() || 'timbres-tora-or',
+                ha_discovery: document.getElementById('mqttHADiscovery').checked
+            };
+
+            // Validar que si está habilitado, tenga servidor
+            if (config.enabled && !config.server) {
+                showNotification('Debes ingresar un servidor MQTT', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/mqtt/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthToken()
+                    },
+                    body: JSON.stringify(config)
+                });
+
+                if (response.ok) {
+                    showNotification('Configuración MQTT guardada correctamente', 'success');
+                    // Limpiar contraseña del formulario por seguridad
+                    document.getElementById('mqttPassword').value = '';
+                    // Recargar estado después de 1 segundo
+                    setTimeout(loadMQTTConfig, 1000);
+                } else {
+                    const data = await response.json();
+                    showNotification('Error: ' + (data.error || 'No se pudo guardar'), 'error');
+                }
+            } catch (error) {
+                showNotification('Error guardando configuración MQTT', 'error');
+                console.error(error);
+            }
+        }
+
         function showNotification(message, type = 'success') {
             const notification = document.createElement('div');
             notification.className = `notification ${type}`;

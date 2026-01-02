@@ -1615,6 +1615,20 @@ void handleBackup() {
     doc["normalUserConfigured"] = false;
   }
 
+  // Configuración MQTT (incluye server, puerto, usuario y contraseña)
+  if (mqtt_enabled) {
+    doc["mqttConfigured"] = true;
+    doc["mqttServer"] = mqtt_server;
+    doc["mqttPort"] = mqtt_port;
+    doc["mqttUser"] = mqtt_user;
+    doc["mqttPassword"] = mqtt_password;
+    doc["mqttClientId"] = mqtt_client_id;
+    doc["mqttEnabled"] = mqtt_enabled;
+    doc["mqttHADiscovery"] = mqtt_ha_discovery;
+  } else {
+    doc["mqttConfigured"] = false;
+  }
+
   String response;
   serializeJson(doc, response);
   server.send(200, "application/json", response);
@@ -1732,6 +1746,26 @@ void handleRestore() {
       normalUserConfigured = true;
       saveNormalUser(username, password);
       Serial.printf("Usuario del backup restaurado: %s\n", username.c_str());
+    }
+  }
+
+  // Restaurar configuración MQTT
+  if (doc["mqttConfigured"].as<bool>()) {
+    mqtt_server = doc["mqttServer"].as<String>();
+    mqtt_port = doc["mqttPort"] | 1883;
+    mqtt_user = doc["mqttUser"].as<String>();
+    mqtt_password = doc["mqttPassword"].as<String>();
+    mqtt_client_id = doc["mqttClientId"] | "timbres-tora-or";
+    mqtt_enabled = doc["mqttEnabled"] | false;
+    mqtt_ha_discovery = doc["mqttHADiscovery"] | true;
+
+    saveMQTTConfig();
+    Serial.println("Configuración MQTT restaurada");
+
+    // Reconectar si está habilitado y hay WiFi
+    if (mqtt_enabled && mqtt_server.length() > 0 && WiFi.status() == WL_CONNECTED) {
+      mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
+      reconnectMQTT();
     }
   }
 

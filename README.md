@@ -1,9 +1,20 @@
 # Sistema de Timbres Tora Or con ESP32
 
-Sistema automatizado para controlar 4 timbres con programación de horarios mediante interfaz web, RTC para funcionamiento sin internet, sincronización NTP, y **Captive Portal WiFi** para configuración fácil.
+Sistema automatizado para controlar 4 timbres con programación de horarios mediante interfaz web, RTC para funcionamiento sin internet, sincronización NTP, **Captive Portal WiFi** para configuración fácil, y **soporte completo MQTT / Home Assistant** para automatización del hogar.
 
 ## Características
 
+### 🆕 Nuevo en v1.3: Integración MQTT / Home Assistant
+- **Integración MQTT completa** - Conecta con Home Assistant u otro broker MQTT
+- **Auto-descubrimiento Home Assistant** - Los dispositivos aparecen automáticamente en HA
+- **Switches individuales** - Control remoto de cada timbre desde Home Assistant
+- **Switch global del sistema** - Activa/desactiva todo el sistema remotamente
+- **Sensores de estado** - Señal WiFi y dirección IP en Home Assistant
+- **Eventos de timbres** - Notificaciones cuando se activan/desactivan timbres
+- **Configuración web MQTT** - Configura MQTT desde la interfaz de configuración
+- **Backup incluye MQTT** - La configuración MQTT se guarda en backups
+
+### Características principales
 - **Captive Portal WiFi** - Configuración WiFi fácil en 192.168.4.1
 - **Modo Access Point automático** - Si no hay WiFi configurado o pierde conexión
 - **Reconexión automática** - Intenta reconectar cada 2 minutos al WiFi guardado
@@ -230,6 +241,69 @@ const unsigned long WIFI_RETRY_INTERVAL = 120000; // 2 minutos en milisegundos
 // Para 5 minutos: usar 300000
 ```
 
+## Integración con Home Assistant (MQTT)
+
+### Configuración Rápida
+
+1. **Configurar broker MQTT en Home Assistant**
+   - Instala el add-on "Mosquitto broker" desde Settings → Add-ons
+   - Inicia el broker y configura usuario/contraseña (opcional)
+
+2. **Configurar MQTT en el sistema de timbres**
+   - Accede a la interfaz web del ESP32
+   - Inicia sesión como administrador (`dirasmart` / `dirasmart1`)
+   - Ve a Configuración → Integración MQTT / Home Assistant
+   - Habilita MQTT y configura:
+     - **Servidor MQTT**: IP de Home Assistant (ej: `192.168.1.10`)
+     - **Puerto**: `1883`
+     - **Usuario/Contraseña**: Credenciales del broker (si configuraste autenticación)
+     - **Auto-descubrimiento HA**: ✅ Activado
+   - Guarda la configuración
+
+3. **Verificar en Home Assistant**
+   - Ve a Settings → Devices & Services → MQTT
+   - Deberías ver el dispositivo "Sistema Timbres Tora Or"
+   - Cada timbre aparecerá como un switch individual
+
+### Entidades Disponibles en Home Assistant
+
+**Switches (Interruptores):**
+- `switch.timbre_1` - Control del Timbre 1
+- `switch.timbre_2` - Control del Timbre 2
+- `switch.timbre_3` - Control del Timbre 3
+- `switch.timbre_4` - Control del Timbre 4
+- `switch.sistema_timbres_global` - Switch global del sistema
+
+**Sensores:**
+- `sensor.timbres_wifi_signal` - Señal WiFi (dBm)
+- `sensor.timbres_ip_address` - Dirección IP del ESP32
+
+### Ejemplo de Automatización en Home Assistant
+
+```yaml
+automation:
+  - alias: "Timbre de Recreo a las 10:30"
+    trigger:
+      - platform: time
+        at: "10:30:00"
+    condition:
+      - condition: state
+        entity_id: binary_sensor.workday_sensor
+        state: "on"
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.timbre_2
+```
+
+### Documentación Completa
+
+Para más información sobre la integración MQTT, consulta el archivo [INTEGRACION_HOME_ASSISTANT.md](INTEGRACION_HOME_ASSISTANT.md) que incluye:
+- Topics MQTT disponibles
+- Ejemplos de automatizaciones avanzadas
+- Solución de problemas
+- Configuración de dashboards personalizados
+
 ## Configuración Avanzada
 
 ### Cambiar Duración del Timbre
@@ -388,13 +462,16 @@ Para problemas o preguntas, revisa:
 
 ## Mejoras Futuras
 
-- ✅ ~~Modo Access Point para configuración inicial sin WiFi~~ (Implementado)
-- ✅ ~~Captive Portal~~ (Implementado)
-- ✅ ~~Reconexión automática~~ (Implementado)
-- Notificaciones de eventos
-- Historial de activaciones
+- ✅ ~~Modo Access Point para configuración inicial sin WiFi~~ (Implementado v1.0)
+- ✅ ~~Captive Portal~~ (Implementado v1.0)
+- ✅ ~~Reconexión automática~~ (Implementado v1.0)
+- ✅ ~~Integración MQTT / Home Assistant~~ (Implementado v1.3)
+- ✅ ~~Auto-descubrimiento Home Assistant~~ (Implementado v1.3)
+- Notificaciones push desde Home Assistant
+- Historial de activaciones en base de datos
 - Soporte para más de 4 timbres
 - Configuración de melodías diferentes por timbre
 - Integración con Google Calendar
 - Modo AP+STA simultáneo permanente
 - Página de diagnóstico y logs
+- Dashboard de estadísticas de uso
