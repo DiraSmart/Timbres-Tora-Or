@@ -503,6 +503,24 @@
             }
         }
 
+        .powered-by {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .powered-by img {
+            max-width: 120px;
+            height: auto;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+
+        .powered-by img:hover {
+            opacity: 1;
+        }
+
         @media (max-width: 768px) {
             header {
                 flex-direction: column;
@@ -528,6 +546,15 @@
 
             .btn-small {
                 flex: 1;
+            }
+
+            .powered-by {
+                bottom: 10px;
+                right: 10px;
+            }
+
+            .powered-by img {
+                max-width: 80px;
             }
         }
     </style>
@@ -665,6 +692,10 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <div class="powered-by">
+        <img src="/poweredlight.png" alt="Powered by DiraSmart">
     </div>
 
     <!-- Modal para agregar/editar horario -->

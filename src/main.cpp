@@ -1709,6 +1709,18 @@ void handleLogo() {
   file.close();
 }
 
+void handlePoweredLight() {
+  File file = LittleFS.open("/poweredlight.png", "r");
+  if (!file) {
+    Serial.println("[ERROR] No se pudo abrir poweredlight.png");
+    server.send(404, "text/plain", "Logo no encontrado");
+    return;
+  }
+
+  server.streamFile(file, "image/png");
+  file.close();
+}
+
 // Captive portal - redirigir todo al portal de configuración
 void handleNotFound() {
   Serial.printf("[DEBUG] Ruta no encontrada: %s (Método: %s)\n",
@@ -1742,6 +1754,7 @@ void initWebServer() {
 
   // Servir archivos estáticos
   server.on("/logo-tora-or.png", HTTP_GET, handleLogo);
+  server.on("/poweredlight.png", HTTP_GET, handlePoweredLight);
 
   // Rutas para el panel principal
   server.on("/", handleRoot);
