@@ -60,6 +60,7 @@ bool wifiConfigured = false;
 
 // Estructura para almacenar horarios
 struct Schedule {
+  char name[31]; // Nombre del horario (máx 30 caracteres + \0)
   bool enabled;
   int hour;
   int minute;
@@ -539,6 +540,11 @@ void loadSchedules() {
   for (JsonObject obj : array) {
     if (scheduleCount >= MAX_SCHEDULES) break;
 
+    // Cargar nombre del horario
+    String scheduleName = obj["name"] | "";
+    strncpy(schedules[scheduleCount].name, scheduleName.c_str(), sizeof(schedules[scheduleCount].name) - 1);
+    schedules[scheduleCount].name[sizeof(schedules[scheduleCount].name) - 1] = '\0';
+
     schedules[scheduleCount].enabled = obj["enabled"] | true;
     schedules[scheduleCount].hour = obj["hour"];
     schedules[scheduleCount].minute = obj["minute"];
@@ -561,6 +567,7 @@ void saveSchedules() {
 
   for (int i = 0; i < scheduleCount; i++) {
     JsonObject obj = array.add<JsonObject>();
+    obj["name"] = schedules[i].name;
     obj["enabled"] = schedules[i].enabled;
     obj["hour"] = schedules[i].hour;
     obj["minute"] = schedules[i].minute;
@@ -898,6 +905,7 @@ void handleGetSchedules() {
   for (int i = 0; i < scheduleCount; i++) {
     JsonObject obj = array.add<JsonObject>();
     obj["id"] = i;
+    obj["name"] = schedules[i].name;
     obj["enabled"] = schedules[i].enabled;
     obj["hour"] = schedules[i].hour;
     obj["minute"] = schedules[i].minute;
@@ -933,6 +941,11 @@ void handleSaveSchedules() {
 
   for (JsonObject obj : array) {
     if (scheduleCount >= MAX_SCHEDULES) break;
+
+    // Guardar nombre del horario
+    String scheduleName = obj["name"] | "";
+    strncpy(schedules[scheduleCount].name, scheduleName.c_str(), sizeof(schedules[scheduleCount].name) - 1);
+    schedules[scheduleCount].name[sizeof(schedules[scheduleCount].name) - 1] = '\0';
 
     schedules[scheduleCount].enabled = obj["enabled"] | true;
     schedules[scheduleCount].hour = obj["hour"];
@@ -1276,6 +1289,7 @@ void handleBackup() {
   JsonArray schedulesArray = doc["schedules"].to<JsonArray>();
   for (int i = 0; i < scheduleCount; i++) {
     JsonObject obj = schedulesArray.add<JsonObject>();
+    obj["name"] = schedules[i].name;
     obj["enabled"] = schedules[i].enabled;
     obj["hour"] = schedules[i].hour;
     obj["minute"] = schedules[i].minute;
@@ -1370,6 +1384,11 @@ void handleRestore() {
 
     for (JsonObject obj : schedulesArray) {
       if (scheduleCount >= MAX_SCHEDULES) break;
+
+      // Restaurar nombre del horario
+      String scheduleName = obj["name"] | "";
+      strncpy(schedules[scheduleCount].name, scheduleName.c_str(), sizeof(schedules[scheduleCount].name) - 1);
+      schedules[scheduleCount].name[sizeof(schedules[scheduleCount].name) - 1] = '\0';
 
       schedules[scheduleCount].enabled = obj["enabled"] | true;
       schedules[scheduleCount].hour = obj["hour"];
