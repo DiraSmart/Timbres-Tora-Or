@@ -1779,12 +1779,7 @@ void handleRestore() {
 
 // Página HTML para OTA update
 void handleOTAPage() {
-  if (!checkAuth()) {
-    server.sendHeader("Location", "/login.html");
-    server.send(302, "text/plain", "");
-    return;
-  }
-
+  // OTA page is now accessible without authentication
   String html = R"rawliteral(
 <!DOCTYPE html>
 <html lang="es">
@@ -2005,11 +2000,7 @@ void handleOTAPage() {
 
 // Manejar actualización OTA
 void handleOTAUpdate() {
-  if (!checkAuth()) {
-    server.send(401, "application/json", "{\"success\":false,\"error\":\"No autenticado\"}");
-    return;
-  }
-
+  // OTA update is now accessible without authentication
   HTTPUpload& upload = server.upload();
 
   if (upload.status == UPLOAD_FILE_START) {
