@@ -9,6 +9,7 @@
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include <Update.h>
+#include <PubSubClient.h>
 
 // Configuración Access Point
 const char* ap_ssid = "Timbres-Escuela-Config";
@@ -48,6 +49,27 @@ NTPClient timeClient(ntpUDP, "pool.ntp.org", -18000, 60000);
 // Web Server y DNS Server
 WebServer server(80);
 DNSServer dnsServer;
+
+// ============== MQTT Configuration ==============
+String mqtt_server = "";
+int mqtt_port = 1883;
+String mqtt_user = "";
+String mqtt_password = "";
+String mqtt_client_id = "timbres-tora-or";
+bool mqtt_enabled = false;
+bool mqtt_ha_discovery = true;
+
+WiFiClient espClient;
+PubSubClient mqttClient(espClient);
+unsigned long lastMqttReconnectAttempt = 0;
+const unsigned long MQTT_RECONNECT_INTERVAL = 5000; // 5 segundos
+
+// MQTT Topics
+const String MQTT_BASE_TOPIC = "timbres";
+bool globalSystemEnabled = true; // Switch global para activar/desactivar sistema
+
+// Forward declarations
+void activateBell(int bellIndex);
 
 // Variables de estado WiFi
 enum WiFiMode { MODE_AP, MODE_STA, MODE_BOTH };
@@ -141,6 +163,261 @@ void saveWiFiConfig(const String& ssid, const String& password) {
   wifiConfigured = true;
 
   Serial.printf("Configuración WiFi guardada: %s\n", ssid.c_str());
+}
+
+// ============== FUNCIONES MQTT ==============
+
+void loadMQTTConfig() {
+  File file = LittleFS.open("/mqtt.json", "r");
+  if (!file) {
+    Serial.println("No hay configuración MQTT guardada");
+    mqtt_enabled = false;
+    return;
+  }
+
+  JsonDocument doc;
+  DeserializationError error = deserializeJson(doc, file);
+  file.close();
+
+  if (error) {
+    Serial.println("Error leyendo configuración MQTT");
+    mqtt_enabled = false;
+    return;
+  }
+
+  mqtt_server = doc["server"].as<String>();
+  mqtt_port = doc["port"] | 1883;
+  mqtt_user = doc["user"].as<String>();
+  mqtt_password = doc["password"].as<String>();
+  mqtt_client_id = doc["client_id"] | "timbres-tora-or";
+  mqtt_enabled = doc["enabled"] | false;
+  mqtt_ha_discovery = doc["ha_discovery"] | true;
+
+  if (mqtt_enabled && mqtt_server.length() > 0) {
+    Serial.printf("Configuración MQTT cargada: %s:%d\n", mqtt_server.c_str(), mqtt_port);
+    mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
+  }
+}
+
+void saveMQTTConfig() {
+  JsonDocument doc;
+  doc["server"] = mqtt_server;
+  doc["port"] = mqtt_port;
+  doc["user"] = mqtt_user;
+  doc["password"] = mqtt_password;
+  doc["client_id"] = mqtt_client_id;
+  doc["enabled"] = mqtt_enabled;
+  doc["ha_discovery"] = mqtt_ha_discovery;
+
+  File file = LittleFS.open("/mqtt.json", "w");
+  if (!file) {
+    Serial.println("Error guardando configuración MQTT");
+    return;
+  }
+
+  serializeJson(doc, file);
+  file.close();
+
+  Serial.printf("Configuración MQTT guardada: %s:%d\n", mqtt_server.c_str(), mqtt_port);
+}
+
+void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  String message;
+  for (unsigned int i = 0; i < length; i++) {
+    message += (char)payload[i];
+  }
+
+  Serial.printf("MQTT Message: %s -> %s\n", topic, message.c_str());
+
+  String topicStr = String(topic);
+
+  // Control de timbres individuales
+  for (int i = 0; i < 4; i++) {
+    String bellTopic = MQTT_BASE_TOPIC + "/bell" + String(i) + "/set";
+    if (topicStr == bellTopic) {
+      if (message == "ON" && globalSystemEnabled) {
+        activateBell(i);
+        mqttClient.publish((MQTT_BASE_TOPIC + "/bell" + String(i) + "/state").c_str(), "ON", true);
+      }
+      return;
+    }
+  }
+
+  // Switch global del sistema
+  if (topicStr == MQTT_BASE_TOPIC + "/system/set") {
+    globalSystemEnabled = (message == "ON");
+    mqttClient.publish((MQTT_BASE_TOPIC + "/system/state").c_str(), globalSystemEnabled ? "ON" : "OFF", true);
+    Serial.printf("Sistema global: %s\n", globalSystemEnabled ? "ACTIVADO" : "DESACTIVADO");
+    return;
+  }
+}
+
+void publishMQTTDiscovery() {
+  if (!mqtt_ha_discovery || !mqttClient.connected()) {
+    return;
+  }
+
+  Serial.println("Publicando auto-descubrimiento Home Assistant...");
+
+  JsonDocument doc;
+  String discoveryTopic;
+  String payload;
+
+  // Descubrimiento para cada timbre (switches)
+  for (int i = 0; i < 4; i++) {
+    doc.clear();
+    discoveryTopic = "homeassistant/switch/timbres/bell" + String(i) + "/config";
+
+    doc["name"] = bellNames[i];
+    doc["unique_id"] = "timbres_bell_" + String(i);
+    doc["command_topic"] = MQTT_BASE_TOPIC + "/bell" + String(i) + "/set";
+    doc["state_topic"] = MQTT_BASE_TOPIC + "/bell" + String(i) + "/state";
+    doc["icon"] = "mdi:bell-ring";
+    doc["device"]["identifiers"][0] = "timbres_tora_or";
+    doc["device"]["name"] = "Sistema Timbres Tora Or";
+    doc["device"]["manufacturer"] = "DiraSmart";
+    doc["device"]["model"] = "ESP32 Bell Controller";
+    doc["device"]["sw_version"] = "1.3";
+
+    serializeJson(doc, payload);
+    mqttClient.publish(discoveryTopic.c_str(), payload.c_str(), true);
+    payload = "";
+    delay(100);
+  }
+
+  // Switch global del sistema
+  doc.clear();
+  discoveryTopic = "homeassistant/switch/timbres/system/config";
+
+  doc["name"] = "Sistema Timbres Global";
+  doc["unique_id"] = "timbres_system_switch";
+  doc["command_topic"] = MQTT_BASE_TOPIC + "/system/set";
+  doc["state_topic"] = MQTT_BASE_TOPIC + "/system/state";
+  doc["icon"] = "mdi:power";
+  doc["device"]["identifiers"][0] = "timbres_tora_or";
+  doc["device"]["name"] = "Sistema Timbres Tora Or";
+  doc["device"]["manufacturer"] = "DiraSmart";
+  doc["device"]["model"] = "ESP32 Bell Controller";
+  doc["device"]["sw_version"] = "1.3";
+
+  serializeJson(doc, payload);
+  mqttClient.publish(discoveryTopic.c_str(), payload.c_str(), true);
+  payload = "";
+
+  // Sensor de WiFi
+  doc.clear();
+  discoveryTopic = "homeassistant/sensor/timbres/wifi_signal/config";
+
+  doc["name"] = "Timbres WiFi Signal";
+  doc["unique_id"] = "timbres_wifi_signal";
+  doc["state_topic"] = MQTT_BASE_TOPIC + "/wifi/rssi";
+  doc["unit_of_measurement"] = "dBm";
+  doc["icon"] = "mdi:wifi";
+  doc["device"]["identifiers"][0] = "timbres_tora_or";
+
+  serializeJson(doc, payload);
+  mqttClient.publish(discoveryTopic.c_str(), payload.c_str(), true);
+  payload = "";
+
+  // Sensor de IP
+  doc.clear();
+  discoveryTopic = "homeassistant/sensor/timbres/ip_address/config";
+
+  doc["name"] = "Timbres IP Address";
+  doc["unique_id"] = "timbres_ip_address";
+  doc["state_topic"] = MQTT_BASE_TOPIC + "/wifi/ip";
+  doc["icon"] = "mdi:ip-network";
+  doc["device"]["identifiers"][0] = "timbres_tora_or";
+
+  serializeJson(doc, payload);
+  mqttClient.publish(discoveryTopic.c_str(), payload.c_str(), true);
+
+  Serial.println("Auto-descubrimiento publicado");
+}
+
+boolean reconnectMQTT() {
+  if (!mqtt_enabled || mqtt_server.length() == 0) {
+    return false;
+  }
+
+  Serial.print("Intentando conexión MQTT...");
+
+  boolean connected = false;
+  if (mqtt_user.length() > 0) {
+    connected = mqttClient.connect(mqtt_client_id.c_str(), mqtt_user.c_str(), mqtt_password.c_str());
+  } else {
+    connected = mqttClient.connect(mqtt_client_id.c_str());
+  }
+
+  if (connected) {
+    Serial.println(" conectado!");
+
+    // Suscribirse a topics de control
+    for (int i = 0; i < 4; i++) {
+      String topic = MQTT_BASE_TOPIC + "/bell" + String(i) + "/set";
+      mqttClient.subscribe(topic.c_str());
+    }
+    mqttClient.subscribe((MQTT_BASE_TOPIC + "/system/set").c_str());
+
+    // Publicar auto-descubrimiento
+    publishMQTTDiscovery();
+
+    // Publicar estado inicial
+    mqttClient.publish((MQTT_BASE_TOPIC + "/system/state").c_str(), globalSystemEnabled ? "ON" : "OFF", true);
+
+    return true;
+  } else {
+    Serial.print(" falló, rc=");
+    Serial.println(mqttClient.state());
+    return false;
+  }
+}
+
+void publishMQTTSensors() {
+  if (!mqttClient.connected()) {
+    return;
+  }
+
+  // Publicar señal WiFi
+  if (WiFi.status() == WL_CONNECTED) {
+    int rssi = WiFi.RSSI();
+    mqttClient.publish((MQTT_BASE_TOPIC + "/wifi/rssi").c_str(), String(rssi).c_str(), true);
+    mqttClient.publish((MQTT_BASE_TOPIC + "/wifi/ip").c_str(), WiFi.localIP().toString().c_str(), true);
+  }
+}
+
+void publishBellEvent(int bellIndex, const char* event) {
+  if (!mqttClient.connected()) {
+    return;
+  }
+
+  String topic = MQTT_BASE_TOPIC + "/bell" + String(bellIndex) + "/event";
+  mqttClient.publish(topic.c_str(), event);
+
+  // Actualizar estado
+  if (String(event) == "activated") {
+    mqttClient.publish((MQTT_BASE_TOPIC + "/bell" + String(bellIndex) + "/state").c_str(), "ON", true);
+  } else if (String(event) == "deactivated") {
+    mqttClient.publish((MQTT_BASE_TOPIC + "/bell" + String(bellIndex) + "/state").c_str(), "OFF", true);
+  }
+}
+
+void handleMQTTConnection() {
+  if (!mqtt_enabled || mqtt_server.length() == 0) {
+    return;
+  }
+
+  if (!mqttClient.connected()) {
+    unsigned long now = millis();
+    if (now - lastMqttReconnectAttempt > MQTT_RECONNECT_INTERVAL) {
+      lastMqttReconnectAttempt = now;
+      if (reconnectMQTT()) {
+        lastMqttReconnectAttempt = 0;
+      }
+    }
+  } else {
+    mqttClient.loop();
+  }
 }
 
 void startAccessPoint() {
@@ -368,6 +645,7 @@ void initFileSystem() {
   }
   Serial.println("Sistema de archivos inicializado");
   loadWiFiConfig();
+  loadMQTTConfig();
   loadBellNames();
   loadBellDurations();
   loadBellVisibility();
@@ -641,10 +919,19 @@ void saveNormalUser(const String& username, const String& password) {
 void activateBell(int bellIndex) {
   if (bellIndex < 0 || bellIndex >= 4) return;
 
+  // Verificar si el sistema global está activado
+  if (!globalSystemEnabled) {
+    Serial.printf("Sistema desactivado. %s no se activará.\n", bellNames[bellIndex].c_str());
+    return;
+  }
+
   digitalWrite(RELAY_PINS[bellIndex], HIGH);
   bellActive[bellIndex] = true;
   bellStartTime[bellIndex] = millis();
   Serial.printf("%s activado\n", bellNames[bellIndex].c_str());
+
+  // Publicar evento MQTT
+  publishBellEvent(bellIndex, "activated");
 }
 
 void updateBells() {
@@ -655,6 +942,9 @@ void updateBells() {
       digitalWrite(RELAY_PINS[i], LOW);
       bellActive[i] = false;
       Serial.printf("%s desactivado\n", bellNames[i].c_str());
+
+      // Publicar evento MQTT
+      publishBellEvent(i, "deactivated");
     }
   }
 }
@@ -1756,6 +2046,69 @@ void handleNotFound() {
   }
 }
 
+// Handler para obtener configuración MQTT
+void handleGetMQTT() {
+  if (!checkAdminAuth()) {
+    server.send(401, "application/json", "{\"success\":false,\"error\":\"Solo admin puede ver configuración MQTT\"}");
+    return;
+  }
+
+  JsonDocument doc;
+  doc["server"] = mqtt_server;
+  doc["port"] = mqtt_port;
+  doc["user"] = mqtt_user;
+  doc["client_id"] = mqtt_client_id;
+  doc["enabled"] = mqtt_enabled;
+  doc["ha_discovery"] = mqtt_ha_discovery;
+  doc["connected"] = mqttClient.connected();
+
+  String response;
+  serializeJson(doc, response);
+  server.send(200, "application/json", response);
+}
+
+// Handler para guardar configuración MQTT
+void handleSaveMQTT() {
+  if (!checkAdminAuth()) {
+    server.send(401, "application/json", "{\"success\":false,\"error\":\"Solo admin puede modificar MQTT\"}");
+    return;
+  }
+
+  if (!server.hasArg("plain")) {
+    server.send(400, "text/plain", "No se recibieron datos");
+    return;
+  }
+
+  JsonDocument doc;
+  DeserializationError error = deserializeJson(doc, server.arg("plain"));
+
+  if (error) {
+    server.send(400, "text/plain", "JSON inválido");
+    return;
+  }
+
+  mqtt_server = doc["server"].as<String>();
+  mqtt_port = doc["port"] | 1883;
+  mqtt_user = doc["user"].as<String>();
+  mqtt_password = doc["password"].as<String>();
+  mqtt_client_id = doc["client_id"] | "timbres-tora-or";
+  mqtt_enabled = doc["enabled"] | false;
+  mqtt_ha_discovery = doc["ha_discovery"] | true;
+
+  saveMQTTConfig();
+
+  if (mqtt_enabled && mqtt_server.length() > 0) {
+    mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
+    if (WiFi.status() == WL_CONNECTED) {
+      reconnectMQTT();
+    }
+  } else if (!mqtt_enabled && mqttClient.connected()) {
+    mqttClient.disconnect();
+  }
+
+  server.send(200, "application/json", "{\"success\":true}");
+}
+
 void initWebServer() {
   // Rutas de autenticación
   server.on("/login.html", handleLoginPage);
@@ -1770,6 +2123,10 @@ void initWebServer() {
   server.on("/api/wifi/scan", HTTP_GET, handleScanNetworks);
   server.on("/api/wifi/save", HTTP_POST, handleSaveWiFi);
   server.on("/api/wifi/status", HTTP_GET, handleGetWiFiStatus);
+
+  // Rutas para configuración MQTT
+  server.on("/api/mqtt/config", HTTP_GET, handleGetMQTT);
+  server.on("/api/mqtt/config", HTTP_POST, handleSaveMQTT);
 
   // Servir archivos estáticos
   server.on("/logo-tora-or.png", HTTP_GET, handleLogo);
@@ -1823,6 +2180,14 @@ void setup() {
   initWiFi();
   initWebServer();
 
+  // Configurar callback MQTT
+  mqttClient.setCallback(mqttCallback);
+
+  // Intentar conectar a MQTT si está habilitado y hay WiFi
+  if (mqtt_enabled && WiFi.status() == WL_CONNECTED) {
+    reconnectMQTT();
+  }
+
   Serial.println("\n=== Sistema listo ===");
 
   if (currentMode == MODE_AP) {
@@ -1834,6 +2199,11 @@ void setup() {
     Serial.println("Modo: WiFi Cliente");
     Serial.printf("WiFi: %s\n", WiFi.SSID().c_str());
     Serial.printf("Panel: http://%s\n", WiFi.localIP().toString().c_str());
+  }
+
+  if (mqtt_enabled) {
+    Serial.printf("MQTT: %s (estado: %s)\n", mqtt_enabled ? "Habilitado" : "Deshabilitado",
+                  mqttClient.connected() ? "Conectado" : "Desconectado");
   }
 }
 
@@ -1847,6 +2217,16 @@ void loop() {
   updateBells();
   checkSchedules();
   checkWiFiConnection();
+
+  // Manejar conexión MQTT
+  handleMQTTConnection();
+
+  // Publicar sensores MQTT cada 30 segundos
+  static unsigned long lastSensorPublish = 0;
+  if (mqttClient.connected() && millis() - lastSensorPublish > 30000) {
+    publishMQTTSensors();
+    lastSensorPublish = millis();
+  }
 
   // Sincronizar con NTP cada hora si hay WiFi (con o sin RTC)
   static unsigned long lastNTPSync = 0;
