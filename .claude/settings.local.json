@@ -19,7 +19,14 @@
       "Bash(git commit:*)",
       "Bash(cat:*)",
       "Bash(git rm:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(git tag:*)",
+      "Bash(git push:*)",
+      "Bash(where gh:*)",
+      "Bash(winget install:*)",
+      "Bash(copy .piobuildesp32devfirmware.bin \"releases\\\\v1.2\\\\tora-or-firmware-v1.2.bin\")",
+      "Bash(copy \".pio\\\\build\\\\esp32dev\\\\firmware.bin\" \"releases\\\\v1.3\\\\tora-or-firmware-v1.3.bin\")",
+      "Bash(pio device list:*)"
     ]
   }
 }

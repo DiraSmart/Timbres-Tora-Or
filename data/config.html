@@ -899,13 +899,21 @@
                 if (response.ok) {
                     const data = await response.json();
 
-                    // Actualizar formulario
-                    document.getElementById('mqttEnabled').checked = data.enabled || false;
-                    document.getElementById('mqttServer').value = data.server || '';
-                    document.getElementById('mqttPort').value = data.port || 1883;
-                    document.getElementById('mqttUser').value = data.user || '';
-                    document.getElementById('mqttClientId').value = data.client_id || 'timbres-tora-or';
-                    document.getElementById('mqttHADiscovery').checked = data.ha_discovery !== false;
+                    // Verificar si el usuario está editando el formulario MQTT
+                    const mqttForm = document.getElementById('mqttForm');
+                    const activeElement = document.activeElement;
+                    const isEditingMqttForm = mqttForm && mqttForm.contains(activeElement) &&
+                                             (activeElement.tagName === 'INPUT' || activeElement.tagName === 'SELECT');
+
+                    // Solo actualizar formulario si el usuario NO está editando
+                    if (!isEditingMqttForm) {
+                        document.getElementById('mqttEnabled').checked = data.enabled || false;
+                        document.getElementById('mqttServer').value = data.server || '';
+                        document.getElementById('mqttPort').value = data.port || 1883;
+                        document.getElementById('mqttUser').value = data.user || '';
+                        document.getElementById('mqttClientId').value = data.client_id || 'timbres-tora-or';
+                        document.getElementById('mqttHADiscovery').checked = data.ha_discovery !== false;
+                    }
 
                     // Actualizar estado
                     const statusDiv = document.getElementById('mqttStatusText');

@@ -47,6 +47,7 @@
   - Auto-descubrimiento Home Assistant (activable)
 - Indicador de estado en tiempo real (Conectado/Desconectado/Deshabilitado)
 - Auto-actualización del estado cada 5 segundos
+- Protección contra borrado de campos mientras se edita
 - Enlace a documentación completa de integración
 
 #### Backup/Restore:
