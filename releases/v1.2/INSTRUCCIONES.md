@@ -4,7 +4,7 @@
 
 - ✅ Actualización de GPIOs de relés para mejor compatibilidad (32, 33, 25, 26)
 - ✅ Logo de la escuela en todas las páginas (login, principal y configuración)
-- ✅ Logo "Powered by DiraSmart" en esquina inferior derecha de todas las páginas
+- ✅ Logo "Powered by DiraSmart" al final de la página principal de horarios
 - ✅ Manejador de archivos estáticos para servir imágenes PNG
 - ✅ Corrección en nombres de archivos (sin espacios en URLs)
 - ✅ FIX: Backup ahora guarda y restaura nombres de horarios correctamente
