@@ -63,13 +63,17 @@ WiFiClient espClient;
 PubSubClient mqttClient(espClient);
 unsigned long lastMqttReconnectAttempt = 0;
 const unsigned long MQTT_RECONNECT_INTERVAL = 5000; // 5 segundos
+const int MQTT_BUFFER_SIZE = 1024; // Aumentar buffer para mensajes de discovery
 
 // MQTT Topics
 const String MQTT_BASE_TOPIC = "timbres";
 bool globalSystemEnabled = true; // Switch global para activar/desactivar sistema
+bool schedulesEnabled = true; // Switch global para activar/desactivar TODOS los horarios
+bool bellSchedulesEnabled[4] = {true, true, true, true}; // Switch individual por timbre
 
 // Forward declarations
 void activateBell(int bellIndex);
+void saveSchedulesSwitchStates();
 
 // Variables de estado WiFi
 enum WiFiMode { MODE_AP, MODE_STA, MODE_BOTH };
@@ -250,6 +254,98 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     Serial.printf("Sistema global: %s\n", globalSystemEnabled ? "ACTIVADO" : "DESACTIVADO");
     return;
   }
+
+  // Switch global de horarios
+  if (topicStr == MQTT_BASE_TOPIC + "/schedules/set") {
+    schedulesEnabled = (message == "ON");
+
+    // Actualizar también todos los switches individuales de los timbres
+    for (int i = 0; i < 4; i++) {
+      bellSchedulesEnabled[i] = schedulesEnabled;
+      // Publicar estado de cada switch individual
+      String bellStateTopic = MQTT_BASE_TOPIC + "/bell" + String(i) + "/schedules/state";
+      String bellStatePayload = schedulesEnabled ? "ON" : "OFF";
+      mqttClient.publish(bellStateTopic.c_str(), bellStatePayload.c_str(), true);
+      Serial.printf("  └─ Horarios %s: %s\n",
+                    bellNames[i].c_str(),
+                    schedulesEnabled ? "ACTIVADOS" : "DESACTIVADOS");
+    }
+
+    String stateTopic = MQTT_BASE_TOPIC + "/schedules/state";
+    String statePayload = schedulesEnabled ? "ON" : "OFF";
+    bool published = mqttClient.publish(stateTopic.c_str(), statePayload.c_str(), true);
+    Serial.printf("Horarios globales: %s | Publicado a %s: %s [%s]\n",
+                  schedulesEnabled ? "ACTIVADOS" : "DESACTIVADOS",
+                  stateTopic.c_str(),
+                  statePayload.c_str(),
+                  published ? "OK" : "FAILED");
+    saveSchedulesSwitchStates(); // Persistir el cambio
+    return;
+  }
+
+  // Switches individuales de horarios por timbre
+  for (int i = 0; i < 4; i++) {
+    String schedTopic = MQTT_BASE_TOPIC + "/bell" + String(i) + "/schedules/set";
+    if (topicStr == schedTopic) {
+      bellSchedulesEnabled[i] = (message == "ON");
+      String stateTopic = MQTT_BASE_TOPIC + "/bell" + String(i) + "/schedules/state";
+      String statePayload = bellSchedulesEnabled[i] ? "ON" : "OFF";
+      bool published = mqttClient.publish(stateTopic.c_str(), statePayload.c_str(), true);
+      Serial.printf("Horarios %s: %s | Publicado a %s: %s [%s]\n",
+                    bellNames[i].c_str(),
+                    bellSchedulesEnabled[i] ? "ACTIVADOS" : "DESACTIVADOS",
+                    stateTopic.c_str(),
+                    statePayload.c_str(),
+                    published ? "OK" : "FAILED");
+      saveSchedulesSwitchStates(); // Persistir el cambio
+      return;
+    }
+  }
+}
+
+// Limpiar mensajes antiguos de MQTT Discovery
+void cleanOldMQTTDiscovery() {
+  if (!mqttClient.connected()) {
+    return;
+  }
+
+  Serial.println("Limpiando mensajes antiguos de MQTT Discovery...");
+
+  // Limpiar discovery antiguo de timbres (switches)
+  for (int i = 0; i < 4; i++) {
+    String switchTopic = "homeassistant/switch/timbres/bell" + String(i) + "/config";
+    mqttClient.publish(switchTopic.c_str(), "", true);
+    delay(50);
+  }
+
+  // Limpiar discovery antiguo de timbres (buttons)
+  for (int i = 0; i < 4; i++) {
+    String buttonTopic = "homeassistant/button/timbres/bell" + String(i) + "/config";
+    mqttClient.publish(buttonTopic.c_str(), "", true);
+    delay(50);
+  }
+
+  // Limpiar switches de horarios individuales
+  for (int i = 0; i < 4; i++) {
+    String schedTopic = "homeassistant/switch/timbres/bell" + String(i) + "_schedules/config";
+    mqttClient.publish(schedTopic.c_str(), "", true);
+    delay(50);
+  }
+
+  // Limpiar switches globales (system y schedules)
+  mqttClient.publish("homeassistant/switch/timbres/system/config", "", true);
+  delay(50);
+  mqttClient.publish("homeassistant/switch/timbres/schedules/config", "", true);
+  delay(50);
+
+  // Limpiar sensores
+  mqttClient.publish("homeassistant/sensor/timbres/wifi_signal/config", "", true);
+  delay(50);
+  mqttClient.publish("homeassistant/sensor/timbres/ip_address/config", "", true);
+  delay(50);
+
+  Serial.println("Mensajes antiguos limpiados. Esperando 2 segundos antes de republicar...");
+  delay(2000); // Esperar para que Home Assistant procese las eliminaciones
 }
 
 void publishMQTTDiscovery() {
@@ -264,75 +360,174 @@ void publishMQTTDiscovery() {
   String payload;
 
   // Descubrimiento para cada timbre (switches)
+  // Botones de timbres individuales (buttons en lugar de switches)
   for (int i = 0; i < 4; i++) {
+    // Solo publicar si el timbre es visible
+    if (!bellVisibility[i]) {
+      Serial.printf("Timbre %d no visible, omitiendo discovery\n", i);
+      continue;
+    }
+
     doc.clear();
-    discoveryTopic = "homeassistant/switch/timbres/bell" + String(i) + "/config";
+    discoveryTopic = "homeassistant/button/timbres/bell" + String(i) + "/config";
 
     doc["name"] = bellNames[i];
+    doc["object_id"] = "timbre_" + String(i + 1);
     doc["unique_id"] = "timbres_bell_" + String(i);
     doc["command_topic"] = MQTT_BASE_TOPIC + "/bell" + String(i) + "/set";
-    doc["state_topic"] = MQTT_BASE_TOPIC + "/bell" + String(i) + "/state";
+    doc["payload_press"] = "ON";
     doc["icon"] = "mdi:bell-ring";
-    doc["device"]["identifiers"][0] = "timbres_tora_or";
+
+    JsonArray identifiers = doc["device"]["identifiers"].to<JsonArray>();
+    identifiers.add("timbres_tora_or");
     doc["device"]["name"] = "Sistema Timbres Tora Or";
     doc["device"]["manufacturer"] = "DiraSmart";
-    doc["device"]["model"] = "ESP32 Bell Controller";
-    doc["device"]["sw_version"] = "1.3";
+    doc["device"]["model"] = "Bell Controller";
+    doc["device"]["sw_version"] = "1.4";
 
     serializeJson(doc, payload);
-    mqttClient.publish(discoveryTopic.c_str(), payload.c_str(), true);
+    bool published = mqttClient.publish(discoveryTopic.c_str(), payload.c_str(), true);
+    Serial.printf("✓ Discovery publicado para botón '%s' [%s] - Topic: %s - Size: %d bytes\n",
+                  bellNames[i].c_str(),
+                  published ? "OK" : "FAILED",
+                  discoveryTopic.c_str(),
+                  payload.length());
+
     payload = "";
     delay(100);
   }
 
-  // Switch global del sistema
+  // Switch global de horarios
   doc.clear();
-  discoveryTopic = "homeassistant/switch/timbres/system/config";
+  discoveryTopic = "homeassistant/switch/timbres/schedules/config";
 
-  doc["name"] = "Sistema Timbres Global";
-  doc["unique_id"] = "timbres_system_switch";
-  doc["command_topic"] = MQTT_BASE_TOPIC + "/system/set";
-  doc["state_topic"] = MQTT_BASE_TOPIC + "/system/state";
-  doc["icon"] = "mdi:power";
-  doc["device"]["identifiers"][0] = "timbres_tora_or";
+  doc["name"] = "Horarios Programados";
+  doc["object_id"] = "horarios_programados";
+  doc["unique_id"] = "timbres_schedules_switch";
+  doc["command_topic"] = MQTT_BASE_TOPIC + "/schedules/set";
+  doc["state_topic"] = MQTT_BASE_TOPIC + "/schedules/state";
+  doc["payload_on"] = "ON";
+  doc["payload_off"] = "OFF";
+  doc["optimistic"] = false;
+  doc["retain"] = true;
+  doc["icon"] = "mdi:calendar-clock";
+
+  JsonArray identifiers_sched = doc["device"]["identifiers"].to<JsonArray>();
+  identifiers_sched.add("timbres_tora_or");
   doc["device"]["name"] = "Sistema Timbres Tora Or";
   doc["device"]["manufacturer"] = "DiraSmart";
   doc["device"]["model"] = "ESP32 Bell Controller";
-  doc["device"]["sw_version"] = "1.3";
+  doc["device"]["sw_version"] = "1.4";
 
   serializeJson(doc, payload);
   mqttClient.publish(discoveryTopic.c_str(), payload.c_str(), true);
+  Serial.println("✓ Discovery publicado para 'Horarios Programados'");
+
+  // Publicar estado inicial de horarios globales
+  mqttClient.publish((MQTT_BASE_TOPIC + "/schedules/state").c_str(), schedulesEnabled ? "ON" : "OFF", true);
+
   payload = "";
+  delay(100);
+
+  // Switches individuales de horarios por timbre
+  for (int i = 0; i < 4; i++) {
+    // Solo publicar si el timbre es visible
+    if (!bellVisibility[i]) {
+      Serial.printf("Timbre %d no visible, omitiendo switch de horarios\n", i);
+      continue;
+    }
+
+    doc.clear();
+    discoveryTopic = "homeassistant/switch/timbres/bell" + String(i) + "_schedules/config";
+
+    doc["name"] = "Horarios " + bellNames[i];
+    doc["object_id"] = "horarios_timbre_" + String(i + 1);
+    doc["unique_id"] = "timbres_bell_" + String(i) + "_schedules";
+    doc["command_topic"] = MQTT_BASE_TOPIC + "/bell" + String(i) + "/schedules/set";
+    doc["state_topic"] = MQTT_BASE_TOPIC + "/bell" + String(i) + "/schedules/state";
+    doc["payload_on"] = "ON";
+    doc["payload_off"] = "OFF";
+    doc["optimistic"] = false;
+    doc["retain"] = true;
+    doc["icon"] = "mdi:calendar-clock";
+
+    JsonArray identifiers_bell_sched = doc["device"]["identifiers"].to<JsonArray>();
+    identifiers_bell_sched.add("timbres_tora_or");
+    doc["device"]["name"] = "Sistema Timbres Tora Or";
+    doc["device"]["manufacturer"] = "DiraSmart";
+    doc["device"]["model"] = "Bell Controller";
+    doc["device"]["sw_version"] = "1.4";
+
+    serializeJson(doc, payload);
+    bool published = mqttClient.publish(discoveryTopic.c_str(), payload.c_str(), true);
+    Serial.printf("✓ Discovery publicado para 'Horarios %s' [%s] - Size: %d bytes\n",
+                  bellNames[i].c_str(),
+                  published ? "OK" : "FAILED",
+                  payload.length());
+
+    // Publicar estado inicial
+    mqttClient.publish((MQTT_BASE_TOPIC + "/bell" + String(i) + "/schedules/state").c_str(),
+                       bellSchedulesEnabled[i] ? "ON" : "OFF", true);
+
+    payload = "";
+    delay(100);
+  }
 
   // Sensor de WiFi
   doc.clear();
   discoveryTopic = "homeassistant/sensor/timbres/wifi_signal/config";
 
   doc["name"] = "Timbres WiFi Signal";
+  doc["object_id"] = "timbres_wifi_signal";
   doc["unique_id"] = "timbres_wifi_signal";
   doc["state_topic"] = MQTT_BASE_TOPIC + "/wifi/rssi";
   doc["unit_of_measurement"] = "dBm";
+  doc["device_class"] = "signal_strength";
+  doc["state_class"] = "measurement";
   doc["icon"] = "mdi:wifi";
-  doc["device"]["identifiers"][0] = "timbres_tora_or";
+
+  JsonArray identifiers3 = doc["device"]["identifiers"].to<JsonArray>();
+  identifiers3.add("timbres_tora_or");
+  doc["device"]["name"] = "Sistema Timbres Tora Or";
+  doc["device"]["manufacturer"] = "DiraSmart";
+  doc["device"]["model"] = "ESP32 Bell Controller";
+  doc["device"]["sw_version"] = "1.4";
 
   serializeJson(doc, payload);
   mqttClient.publish(discoveryTopic.c_str(), payload.c_str(), true);
+  Serial.println("✓ Discovery publicado para sensor WiFi");
   payload = "";
+  delay(100);
 
   // Sensor de IP
   doc.clear();
   discoveryTopic = "homeassistant/sensor/timbres/ip_address/config";
 
   doc["name"] = "Timbres IP Address";
+  doc["object_id"] = "timbres_ip_address";
   doc["unique_id"] = "timbres_ip_address";
   doc["state_topic"] = MQTT_BASE_TOPIC + "/wifi/ip";
   doc["icon"] = "mdi:ip-network";
-  doc["device"]["identifiers"][0] = "timbres_tora_or";
+
+  JsonArray identifiers4 = doc["device"]["identifiers"].to<JsonArray>();
+  identifiers4.add("timbres_tora_or");
+  doc["device"]["name"] = "Sistema Timbres Tora Or";
+  doc["device"]["manufacturer"] = "DiraSmart";
+  doc["device"]["model"] = "ESP32 Bell Controller";
+  doc["device"]["sw_version"] = "1.4";
 
   serializeJson(doc, payload);
   mqttClient.publish(discoveryTopic.c_str(), payload.c_str(), true);
+  Serial.println("✓ Discovery publicado para sensor IP");
+  payload = "";
 
-  Serial.println("Auto-descubrimiento publicado");
+  Serial.println("✅ Auto-descubrimiento publicado exitosamente");
+
+  // Publicar valores iniciales de sensores
+  int rssi = WiFi.RSSI();
+  String ip = WiFi.localIP().toString();
+  mqttClient.publish((MQTT_BASE_TOPIC + "/wifi/rssi").c_str(), String(rssi).c_str(), true);
+  mqttClient.publish((MQTT_BASE_TOPIC + "/wifi/ip").c_str(), ip.c_str(), true);
 }
 
 boolean reconnectMQTT() {
@@ -359,11 +554,28 @@ boolean reconnectMQTT() {
     }
     mqttClient.subscribe((MQTT_BASE_TOPIC + "/system/set").c_str());
 
-    // Publicar auto-descubrimiento
+    // Suscribirse a topics de control de horarios
+    mqttClient.subscribe((MQTT_BASE_TOPIC + "/schedules/set").c_str());
+    for (int i = 0; i < 4; i++) {
+      String schedTopic = MQTT_BASE_TOPIC + "/bell" + String(i) + "/schedules/set";
+      mqttClient.subscribe(schedTopic.c_str());
+    }
+
+    // Limpiar discovery antiguo y publicar nuevo
+    cleanOldMQTTDiscovery();
     publishMQTTDiscovery();
 
-    // Publicar estado inicial
+    // Publicar estado inicial del sistema global
     mqttClient.publish((MQTT_BASE_TOPIC + "/system/state").c_str(), globalSystemEnabled ? "ON" : "OFF", true);
+
+    // Publicar estado inicial del switch global de horarios
+    mqttClient.publish((MQTT_BASE_TOPIC + "/schedules/state").c_str(), schedulesEnabled ? "ON" : "OFF", true);
+
+    // Publicar estado inicial de switches individuales de horarios
+    for (int i = 0; i < 4; i++) {
+      mqttClient.publish((MQTT_BASE_TOPIC + "/bell" + String(i) + "/schedules/state").c_str(),
+                         bellSchedulesEnabled[i] ? "ON" : "OFF", true);
+    }
 
     return true;
   } else {
@@ -547,6 +759,8 @@ void loadNormalUser();
 void saveNormalUser();
 void loadBellVisibility();
 void saveBellVisibility();
+void loadSchedulesSwitchStates();
+void saveSchedulesSwitchStates();
 
 // Funciones de autenticación
 String generateToken() {
@@ -649,6 +863,7 @@ void initFileSystem() {
   loadBellNames();
   loadBellDurations();
   loadBellVisibility();
+  loadSchedulesSwitchStates(); // Cargar estados de switches de horarios
   loadSchedules();
   loadNormalUser();
 }
@@ -780,6 +995,53 @@ void saveBellVisibility() {
   serializeJson(doc, file);
   file.close();
   Serial.println("Visibilidad de timbres guardada");
+}
+
+void loadSchedulesSwitchStates() {
+  File file = LittleFS.open("/schedules_switches.json", "r");
+  if (!file) {
+    Serial.println("No hay estados de switches de horarios guardados, usando por defecto (todos activados)");
+    return;
+  }
+
+  JsonDocument doc;
+  DeserializationError error = deserializeJson(doc, file);
+  file.close();
+
+  if (error) {
+    Serial.println("Error leyendo estados de switches de horarios");
+    return;
+  }
+
+  schedulesEnabled = doc["global"] | true;
+
+  JsonArray array = doc["bells"].as<JsonArray>();
+  for (int i = 0; i < 4 && i < array.size(); i++) {
+    bellSchedulesEnabled[i] = array[i].as<bool>();
+  }
+
+  Serial.printf("Estados de switches de horarios cargados (Global: %s)\n", schedulesEnabled ? "ON" : "OFF");
+}
+
+void saveSchedulesSwitchStates() {
+  JsonDocument doc;
+
+  doc["global"] = schedulesEnabled;
+
+  JsonArray array = doc["bells"].to<JsonArray>();
+  for (int i = 0; i < 4; i++) {
+    array.add(bellSchedulesEnabled[i]);
+  }
+
+  File file = LittleFS.open("/schedules_switches.json", "w");
+  if (!file) {
+    Serial.println("Error guardando estados de switches de horarios");
+    return;
+  }
+
+  serializeJson(doc, file);
+  file.close();
+  Serial.println("Estados de switches de horarios guardados");
 }
 
 void initWiFi() {
@@ -930,7 +1192,11 @@ void activateBell(int bellIndex) {
   bellStartTime[bellIndex] = millis();
   Serial.printf("%s activado\n", bellNames[bellIndex].c_str());
 
-  // Publicar evento MQTT
+  // Publicar estado y evento MQTT
+  if (mqttClient.connected()) {
+    String stateTopic = MQTT_BASE_TOPIC + "/bell" + String(bellIndex) + "/state";
+    mqttClient.publish(stateTopic.c_str(), "ON", true);
+  }
   publishBellEvent(bellIndex, "activated");
 }
 
@@ -943,7 +1209,11 @@ void updateBells() {
       bellActive[i] = false;
       Serial.printf("%s desactivado\n", bellNames[i].c_str());
 
-      // Publicar evento MQTT
+      // Publicar estado y evento MQTT
+      if (mqttClient.connected()) {
+        String stateTopic = MQTT_BASE_TOPIC + "/bell" + String(i) + "/state";
+        mqttClient.publish(stateTopic.c_str(), "OFF", true);
+      }
       publishBellEvent(i, "deactivated");
     }
   }
@@ -951,6 +1221,11 @@ void updateBells() {
 
 void checkSchedules() {
   if (!hasValidTime()) return; // No verificar horarios si no hay fuente de tiempo
+
+  if (!schedulesEnabled) {
+    // Serial.println("[Horarios] Sistema de horarios DESACTIVADO globalmente");
+    return; // Si los horarios están deshabilitados globalmente, no ejecutar
+  }
 
   DateTime now = getCurrentTime();
   int currentMinute = now.hour() * 60 + now.minute();
@@ -964,11 +1239,19 @@ void checkSchedules() {
   for (int i = 0; i < scheduleCount; i++) {
     if (!schedules[i].enabled) continue;
 
+    // Verificar si los horarios de este timbre específico están habilitados
+    int bellIdx = schedules[i].bellIndex;
+    if (!bellSchedulesEnabled[bellIdx]) {
+      Serial.printf("[Horarios] Timbre %d tiene horarios DESACTIVADOS, saltando horario #%d\n", bellIdx, i);
+      continue;
+    }
+
     if (schedules[i].hour == now.hour() &&
         schedules[i].minute == now.minute() &&
         schedules[i].days[adjustedDay]) {
 
-      activateBell(schedules[i].bellIndex);
+      Serial.printf("[Horarios] ✓ Ejecutando horario #%d para timbre %d\n", i, bellIdx);
+      activateBell(bellIdx);
     }
   }
 }
@@ -1329,6 +1612,76 @@ void handleTestBell() {
   server.send(200, "application/json", "{\"success\":true}");
 }
 
+void handleGetBellStates() {
+  StaticJsonDocument<256> doc;
+  JsonArray states = doc.createNestedArray("states");
+
+  for (int i = 0; i < 4; i++) {
+    states.add(bellActive[i]);
+  }
+
+  String response;
+  serializeJson(doc, response);
+  server.send(200, "application/json", response);
+}
+
+void handleGetSchedulesSwitches() {
+  JsonDocument doc;
+
+  doc["global"] = schedulesEnabled;
+
+  JsonArray bells = doc["bells"].to<JsonArray>();
+  for (int i = 0; i < 4; i++) {
+    bells.add(bellSchedulesEnabled[i]);
+  }
+
+  String response;
+  serializeJson(doc, response);
+  server.send(200, "application/json", response);
+}
+
+void handleSetSchedulesSwitches() {
+  if (!server.hasArg("plain")) {
+    server.send(400, "text/plain", "No se recibieron datos");
+    return;
+  }
+
+  JsonDocument doc;
+  DeserializationError error = deserializeJson(doc, server.arg("plain"));
+
+  if (error) {
+    server.send(400, "text/plain", "JSON inválido");
+    return;
+  }
+
+  // Actualizar switch global si está presente
+  if (doc.containsKey("global")) {
+    schedulesEnabled = doc["global"].as<bool>();
+    // Publicar a MQTT
+    if (mqttClient.connected()) {
+      mqttClient.publish((MQTT_BASE_TOPIC + "/schedules/state").c_str(), schedulesEnabled ? "ON" : "OFF", true);
+    }
+  }
+
+  // Actualizar switches individuales si están presentes
+  if (doc.containsKey("bells")) {
+    JsonArray bells = doc["bells"].as<JsonArray>();
+    for (int i = 0; i < 4 && i < bells.size(); i++) {
+      bellSchedulesEnabled[i] = bells[i].as<bool>();
+      // Publicar a MQTT
+      if (mqttClient.connected()) {
+        mqttClient.publish((MQTT_BASE_TOPIC + "/bell" + String(i) + "/schedules/state").c_str(),
+                           bellSchedulesEnabled[i] ? "ON" : "OFF", true);
+      }
+    }
+  }
+
+  // Guardar cambios
+  saveSchedulesSwitchStates();
+
+  server.send(200, "application/json", "{\"success\":true}");
+}
+
 void handleSyncNTP() {
   if (WiFi.status() != WL_CONNECTED) {
     server.send(503, "application/json", "{\"success\":false,\"error\":\"WiFi no conectado\"}");
@@ -1559,7 +1912,7 @@ void handleBackup() {
   JsonDocument doc;
 
   // Información de versión y timestamp
-  doc["version"] = "1.0";
+  doc["version"] = "1.4";
   doc["timestamp"] = millis();
   doc["device"] = "Tora-Or";
 
@@ -1710,6 +2063,7 @@ void handleRestore() {
   }
 
   // Restaurar configuración WiFi (SSID y contraseña)
+  bool wifiNeedsReconnect = false;
   if (doc["wifiConfigured"].as<bool>() && doc.containsKey("wifiSSID")) {
     String ssid = doc["wifiSSID"].as<String>();
     String password = doc.containsKey("wifiPassword") ? doc["wifiPassword"].as<String>() : "";
@@ -1717,11 +2071,7 @@ void handleRestore() {
     if (ssid.length() > 0) {
       saveWiFiConfig(ssid, password);
       Serial.printf("WiFi del backup restaurado: %s\n", ssid.c_str());
-
-      // Intentar conectar
-      if (connectToWiFi()) {
-        Serial.println("Conectado exitosamente a WiFi restaurado");
-      }
+      wifiNeedsReconnect = true;
     }
   }
 
@@ -1750,6 +2100,7 @@ void handleRestore() {
   }
 
   // Restaurar configuración MQTT
+  bool mqttNeedsReconnect = false;
   if (doc["mqttConfigured"].as<bool>()) {
     mqtt_server = doc["mqttServer"].as<String>();
     mqtt_port = doc["mqttPort"] | 1883;
@@ -1762,18 +2113,34 @@ void handleRestore() {
     saveMQTTConfig();
     Serial.println("Configuración MQTT restaurada");
 
-    // Reconectar si está habilitado y hay WiFi
+    // Marcar para reconectar DESPUÉS de enviar la respuesta HTTP
     if (mqtt_enabled && mqtt_server.length() > 0 && WiFi.status() == WL_CONNECTED) {
-      mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
-      reconnectMQTT();
+      mqttNeedsReconnect = true;
     }
   }
 
+  // Enviar respuesta HTTP PRIMERO, antes de cualquier reconexión
   if (success) {
     server.send(200, "application/json", "{\"success\":true}");
     Serial.println("Backup restaurado correctamente");
   } else {
     server.send(500, "application/json", "{\"success\":false,\"error\":\"Error restaurando algunos datos\"}");
+  }
+
+  // Ahora sí reconectar WiFi si es necesario (después de enviar la respuesta)
+  if (wifiNeedsReconnect) {
+    Serial.println("Intentando reconectar WiFi con la configuración restaurada...");
+    if (connectToWiFi()) {
+      Serial.println("Conectado exitosamente a WiFi restaurado");
+    } else {
+      Serial.println("No se pudo conectar al WiFi restaurado");
+    }
+  }
+
+  // Reconectar MQTT si es necesario (después de enviar la respuesta)
+  if (mqttNeedsReconnect) {
+    mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
+    reconnectMQTT();
   }
 }
 
@@ -2134,6 +2501,25 @@ void handleSaveMQTT() {
   server.send(200, "application/json", "{\"success\":true}");
 }
 
+// Handler para republicar MQTT Discovery
+void handleRepublishMQTTDiscovery() {
+  if (!checkAdminAuth()) {
+    server.send(401, "application/json", "{\"success\":false,\"error\":\"Solo admin puede republicar discovery\"}");
+    return;
+  }
+
+  if (!mqtt_enabled || !mqttClient.connected()) {
+    server.send(400, "application/json", "{\"success\":false,\"error\":\"MQTT no está conectado\"}");
+    return;
+  }
+
+  // Limpiar y republicar
+  cleanOldMQTTDiscovery();
+  publishMQTTDiscovery();
+
+  server.send(200, "application/json", "{\"success\":true,\"message\":\"Discovery republicado exitosamente\"}");
+}
+
 void initWebServer() {
   // Rutas de autenticación
   server.on("/login.html", handleLoginPage);
@@ -2152,6 +2538,7 @@ void initWebServer() {
   // Rutas para configuración MQTT
   server.on("/api/mqtt/config", HTTP_GET, handleGetMQTT);
   server.on("/api/mqtt/config", HTTP_POST, handleSaveMQTT);
+  server.on("/api/mqtt/republish-discovery", HTTP_POST, handleRepublishMQTTDiscovery);
 
   // Servir archivos estáticos
   server.on("/logo-tora-or.png", HTTP_GET, handleLogo);
@@ -2171,6 +2558,9 @@ void initWebServer() {
   server.on("/api/time", HTTP_GET, handleGetTime);
   server.on("/api/time", HTTP_POST, handleSetTime);
   server.on("/api/test", HTTP_POST, handleTestBell);
+  server.on("/api/bell-states", HTTP_GET, handleGetBellStates);
+  server.on("/api/schedules-switches", HTTP_GET, handleGetSchedulesSwitches);
+  server.on("/api/schedules-switches", HTTP_POST, handleSetSchedulesSwitches);
   server.on("/api/sync", HTTP_POST, handleSyncNTP);
 
   // Rutas para backup/restore
@@ -2205,7 +2595,8 @@ void setup() {
   initWiFi();
   initWebServer();
 
-  // Configurar callback MQTT
+  // Configurar MQTT buffer size y callback
+  mqttClient.setBufferSize(MQTT_BUFFER_SIZE);
   mqttClient.setCallback(mqttCallback);
 
   // Intentar conectar a MQTT si está habilitado y hay WiFi

@@ -126,6 +126,67 @@
             transform: translateY(0);
         }
 
+        .bell-btn.ringing {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            animation: pulse 1s infinite;
+            box-shadow: 0 0 20px rgba(72, 187, 120, 0.5);
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        /* Switch toggle */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e0;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #48bb78;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
         .btn {
             background: #667eea;
             color: white;
@@ -405,6 +466,14 @@
                     </div>
                 </form>
 
+                <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 10px; padding: 15px; margin-top: 20px;">
+                    <div style="color: #856404; font-weight: 600; margin-bottom: 10px;">🔄 Republicar Auto-Descubrimiento</div>
+                    <div style="color: #856404; font-size: 0.9em; margin-bottom: 15px;">
+                        Si los dispositivos no aparecen correctamente en Home Assistant o los nombres no se actualizan, usa este botón para limpiar y republicar el discovery.
+                    </div>
+                    <button type="button" class="btn btn-secondary" onclick="republishDiscovery()">🔄 Republicar Discovery</button>
+                </div>
+
                 <div style="background: #e0f2fe; border: 2px solid #0284c7; border-radius: 10px; padding: 15px; margin-top: 20px;">
                     <div style="color: #075985; font-weight: 600; margin-bottom: 5px;">ℹ️ Documentación</div>
                     <div style="color: #075985; font-size: 0.9em;">
@@ -585,14 +654,46 @@
             loadNormalUserInfo();
             loadBellVisibility();
             updateCurrentTime();
+            updateBellStates(); // Actualizar estado de timbres inmediatamente
             setInterval(updateCurrentTime, 1000);
             setInterval(loadWiFiStatus, 5000);
             setInterval(loadMQTTConfig, 5000);
+            setInterval(updateBellStates, 500); // Actualizar estado de timbres cada 500ms
         }
 
         // Obtener token de autenticación
         function getAuthToken() {
             return localStorage.getItem('authToken');
+        }
+
+        // Actualizar estado visual de los timbres
+        async function updateBellStates() {
+            try {
+                const response = await fetch('/api/bell-states', {
+                    headers: {
+                        'Authorization': getAuthToken()
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const states = data.states || [false, false, false, false];
+
+                    // Actualizar visualmente cada botón de timbre
+                    for (let i = 0; i < 4; i++) {
+                        const bellButton = document.querySelector(`.bell-btn[onclick="testBell(${i})"]`);
+                        if (bellButton) {
+                            if (states[i]) {
+                                bellButton.classList.add('ringing');
+                            } else {
+                                bellButton.classList.remove('ringing');
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                // Silenciar errores para no llenar la consola
+            }
         }
 
         // Cargar nombres de timbres
@@ -981,6 +1082,29 @@
             }
         }
 
+        // Republicar MQTT Discovery
+        async function republishDiscovery() {
+            try {
+                const response = await fetch('/api/mqtt/republish-discovery', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': getAuthToken()
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showNotification('✅ Discovery republicado. Verifica Home Assistant en unos segundos.', 'success');
+                } else {
+                    showNotification('Error: ' + (data.error || 'No se pudo republicar'), 'error');
+                }
+            } catch (error) {
+                showNotification('Error republicando discovery', 'error');
+                console.error(error);
+            }
+        }
+
         function showNotification(message, type = 'success') {
             const notification = document.createElement('div');
             notification.className = `notification ${type}`;
@@ -1125,6 +1249,12 @@
                     },
                     body: JSON.stringify(backupData)
                 });
+
+                // Check if the HTTP response is OK before parsing JSON
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Error HTTP ${response.status}: ${errorText}`);
+                }
 
                 const result = await response.json();
 

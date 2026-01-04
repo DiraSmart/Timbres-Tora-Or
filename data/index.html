@@ -826,8 +826,10 @@
             await loadBellDurations();
             await loadBellVisibility();
             await loadSchedules();
+            await loadSchedulesSwitches();
             updateCurrentTime();
             setInterval(updateCurrentTime, 1000);
+            setInterval(loadSchedulesSwitches, 2000); // Actualizar switches cada 2 segundos
 
             // Ocultar botón de configuración si no es admin
             if (!isAdmin) {
@@ -1105,10 +1107,8 @@
 
                 countBadge.textContent = `${bellSchedules.length} horario${bellSchedules.length !== 1 ? 's' : ''}`;
 
-                // Actualizar estado del master toggle
-                const masterToggle = document.getElementById(`bell${bellIndex}Master`);
-                const allEnabled = bellSchedules.length > 0 && bellSchedules.every(s => s.enabled);
-                masterToggle.checked = allEnabled;
+                // El toggle maestro ahora refleja bellSchedulesEnabled, no se actualiza aquí
+                // Se actualiza desde loadSchedulesSwitches()
 
                 if (bellSchedules.length === 0) {
                     container.innerHTML = `
@@ -1119,6 +1119,10 @@
                     `;
                     continue;
                 }
+
+                // Obtener estado del switch de horarios para este timbre
+                const bellSchedulesSwitch = document.getElementById(`bell${bellIndex}Master`);
+                const bellSchedulesEnabled = bellSchedulesSwitch ? bellSchedulesSwitch.checked : true;
 
                 container.innerHTML = bellSchedules.map(schedule => {
                     const timeStr = `${String(schedule.hour).padStart(2, '0')}:${String(schedule.minute).padStart(2, '0')}`;
@@ -1135,14 +1139,20 @@
                         </div>
                     ` : '';
 
+                    // Si bellSchedulesEnabled está en false, mostrar todo deshabilitado visualmente
+                    const isVisuallyDisabled = !bellSchedulesEnabled;
+                    const opacity = isVisuallyDisabled ? '0.4' : (!schedule.enabled ? '0.5' : '1');
+                    const statusText = isVisuallyDisabled ? 'Horarios desactivados' : (schedule.enabled ? 'Activo' : 'Inactivo');
+                    const statusColor = isVisuallyDisabled ? '#e53e3e' : (schedule.enabled ? '#48bb78' : '#a0aec0');
+
                     return `
-                        <div class="schedule-item" style="${!schedule.enabled ? 'opacity: 0.5;' : ''}">
+                        <div class="schedule-item" style="opacity: ${opacity}; ${isVisuallyDisabled ? 'filter: grayscale(50%);' : ''}">
                             <div class="schedule-info">
                                 <div class="info-group">
-                                    <span class="toggle-label" style="display: block; text-align: center; margin-bottom: 8px; font-weight: 600;">${schedule.enabled ? 'Activo' : 'Inactivo'}</span>
+                                    <span class="toggle-label" style="display: block; text-align: center; margin-bottom: 8px; font-weight: 600; color: ${statusColor};">${statusText}</span>
                                     <div class="schedule-toggle" style="justify-content: center;">
                                         <label class="switch">
-                                            <input type="checkbox" ${schedule.enabled ? 'checked' : ''} onchange="toggleSchedule(${schedule.id})">
+                                            <input type="checkbox" ${schedule.enabled ? 'checked' : ''} onchange="toggleSchedule(${schedule.id})" ${isVisuallyDisabled ? 'disabled' : ''}>
                                             <span class="slider"></span>
                                         </label>
                                     </div>
@@ -1158,8 +1168,8 @@
                                 </div>
                             </div>
                             <div class="schedule-actions">
-                                <button class="btn btn-small" onclick="editSchedule(${schedule.id})">Editar</button>
-                                <button class="btn btn-small btn-danger" onclick="deleteSchedule(${schedule.id})">Eliminar</button>
+                                <button class="btn btn-small" onclick="editSchedule(${schedule.id})" ${isVisuallyDisabled ? 'disabled' : ''}>Editar</button>
+                                <button class="btn btn-small btn-danger" onclick="deleteSchedule(${schedule.id})" ${isVisuallyDisabled ? 'disabled' : ''}>Eliminar</button>
                             </div>
                         </div>
                     `;
@@ -1177,39 +1187,97 @@
         }
 
         // Activar/desactivar todos los horarios de un timbre
-        function toggleBellMaster(bellIndex) {
+        async function toggleBellMaster(bellIndex) {
             const masterToggle = document.getElementById(`bell${bellIndex}Master`);
             const isEnabled = masterToggle.checked;
 
-            // Actualizar todos los horarios de este timbre
-            schedules.forEach(schedule => {
-                if (schedule.bell === bellIndex) {
-                    schedule.enabled = isEnabled;
-                }
-            });
+            try {
+                const response = await fetch('/api/schedules-switches', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthToken()
+                    },
+                    body: JSON.stringify({
+                        bells: [
+                            bellIndex === 0 ? isEnabled : undefined,
+                            bellIndex === 1 ? isEnabled : undefined,
+                            bellIndex === 2 ? isEnabled : undefined,
+                            bellIndex === 3 ? isEnabled : undefined
+                        ].map((val, idx) => {
+                            if (idx === bellIndex) return isEnabled;
+                            // Mantener valores actuales de los otros timbres
+                            const otherToggle = document.getElementById(`bell${idx}Master`);
+                            return otherToggle ? otherToggle.checked : true;
+                        })
+                    })
+                });
 
-            saveAllSchedules();
+                if (response.ok) {
+                    const bellNames = ['Timbre 1', 'Timbre 2', 'Timbre 3', 'Timbre 4'];
+                    showNotification(
+                        isEnabled ? `Horarios de ${bellNames[bellIndex]} activados` : `Horarios de ${bellNames[bellIndex]} desactivados`,
+                        'success'
+                    );
+                    // Re-renderizar horarios para actualizar el estado visual
+                    renderSchedules();
+                } else {
+                    showNotification('Error al cambiar estado de horarios del timbre', 'error');
+                    // Revertir el toggle si hubo error
+                    masterToggle.checked = !isEnabled;
+                }
+            } catch (error) {
+                showNotification('Error al cambiar estado de horarios del timbre', 'error');
+                // Revertir el toggle si hubo error
+                masterToggle.checked = !isEnabled;
+            }
         }
 
         // Activar/desactivar TODOS los horarios del sistema
-        function toggleAllSchedules() {
+        async function toggleAllSchedules() {
             const globalToggle = document.getElementById('globalMasterToggle');
             const isEnabled = globalToggle.checked;
 
-            // Actualizar todos los horarios
-            schedules.forEach(schedule => {
-                schedule.enabled = isEnabled;
-            });
+            try {
+                // Enviar tanto el estado global como todos los switches individuales
+                const response = await fetch('/api/schedules-switches', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthToken()
+                    },
+                    body: JSON.stringify({
+                        global: isEnabled,
+                        bells: [isEnabled, isEnabled, isEnabled, isEnabled]
+                    })
+                });
 
-            // Actualizar todos los toggles de timbres individuales
-            for (let i = 0; i < 4; i++) {
-                const bellToggle = document.getElementById(`bell${i}Master`);
-                if (bellToggle) {
-                    bellToggle.checked = isEnabled;
+                if (response.ok) {
+                    showNotification(
+                        isEnabled ? 'Todos los horarios activados' : 'Todos los horarios desactivados',
+                        'success'
+                    );
+
+                    // Actualizar todos los toggles individuales visualmente
+                    for (let i = 0; i < 4; i++) {
+                        const bellToggle = document.getElementById(`bell${i}Master`);
+                        if (bellToggle) {
+                            bellToggle.checked = isEnabled;
+                        }
+                    }
+
+                    // Re-renderizar horarios para actualizar el estado visual
+                    renderSchedules();
+                } else {
+                    showNotification('Error al cambiar estado de horarios', 'error');
+                    // Revertir el toggle si hubo error
+                    globalToggle.checked = !isEnabled;
                 }
+            } catch (error) {
+                showNotification('Error al cambiar estado de horarios', 'error');
+                // Revertir el toggle si hubo error
+                globalToggle.checked = !isEnabled;
             }
-
-            saveAllSchedules();
         }
 
         // Mostrar modal de agregar horario
@@ -1357,6 +1425,47 @@
         }
 
         // Mostrar notificación
+        // Cargar estado de switches de horarios
+        async function loadSchedulesSwitches() {
+            try {
+                const response = await fetch('/api/schedules-switches', {
+                    headers: {
+                        'Authorization': getAuthToken()
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    let needsRerender = false;
+
+                    // Actualizar el toggle global
+                    const globalToggle = document.getElementById('globalMasterToggle');
+                    if (globalToggle && globalToggle.checked !== data.global) {
+                        globalToggle.checked = data.global;
+                        needsRerender = true;
+                    }
+
+                    // Actualizar los toggles individuales de cada timbre
+                    if (data.bells && Array.isArray(data.bells)) {
+                        for (let i = 0; i < 4; i++) {
+                            const bellToggle = document.getElementById(`bell${i}Master`);
+                            if (bellToggle && i < data.bells.length && bellToggle.checked !== data.bells[i]) {
+                                bellToggle.checked = data.bells[i];
+                                needsRerender = true;
+                            }
+                        }
+                    }
+
+                    // Re-renderizar horarios si hubo cambios para actualizar el estado visual
+                    if (needsRerender && schedules.length > 0) {
+                        renderSchedules();
+                    }
+                }
+            } catch (error) {
+                console.error('Error cargando switches de horarios:', error);
+            }
+        }
+
         function showNotification(message, type = 'success') {
             const notification = document.createElement('div');
             notification.className = `notification ${type}`;

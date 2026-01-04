@@ -181,11 +181,66 @@ automation:
 
 ### El dispositivo no aparece en Home Assistant
 
-1. Verifica que MQTT esté habilitado en la configuración del sistema
-2. Verifica que "Auto-descubrimiento HA" esté activado
-3. Revisa los logs de Home Assistant para errores MQTT
-4. Reinicia el ESP32 para forzar republicación del auto-descubrimiento
-5. Verifica que el broker MQTT esté corriendo y accesible
+**Paso 1: Verificar configuración MQTT en Home Assistant**
+
+Asegúrate de que Home Assistant tiene MQTT discovery habilitado. En `configuration.yaml`:
+
+```yaml
+mqtt:
+  discovery: true
+  discovery_prefix: homeassistant
+```
+
+Después de agregar o modificar esto, **reinicia Home Assistant**.
+
+**Paso 2: Verificar configuración en el Sistema de Timbres**
+
+1. Accede a http://IP_DEL_ESP32/config.html
+2. En la sección MQTT, verifica que:
+   - ✅ **Habilitar MQTT** esté marcado
+   - ✅ **Auto-descubrimiento Home Assistant** esté marcado
+   - El **Servidor MQTT** sea la IP correcta de Home Assistant
+   - El **Puerto** sea 1883
+   - El estado muestre "✅ MQTT Conectado a [IP]"
+
+**Paso 3: Republicar el Discovery**
+
+Si ya está todo configurado pero los dispositivos no aparecen:
+
+1. En la página de configuración del sistema (http://IP_DEL_ESP32/config.html)
+2. Baja hasta la sección "Integración MQTT / Home Assistant"
+3. Click en el botón **"🔄 Republicar Discovery"**
+4. Espera 10 segundos
+5. En Home Assistant, ve a **Settings → Devices & Services → MQTT**
+6. Busca el dispositivo "Sistema Timbres Tora Or"
+
+**Paso 4: Verificar topics MQTT (método avanzado)**
+
+Puedes usar una herramienta MQTT client (como MQTT Explorer) para verificar que los mensajes se están publicando:
+
+1. Conecta MQTT Explorer al broker
+2. Busca los topics bajo `homeassistant/switch/timbres/`
+3. Deberías ver:
+   - `homeassistant/switch/timbres/bell0/config`
+   - `homeassistant/switch/timbres/bell1/config`
+   - `homeassistant/switch/timbres/bell3/config` (si el timbre 2 está oculto)
+   - `homeassistant/switch/timbres/system/config`
+   - `homeassistant/sensor/timbres/wifi_signal/config`
+   - `homeassistant/sensor/timbres/ip_address/config`
+
+**Paso 5: Revisar logs de Home Assistant**
+
+1. Ve a **Settings → System → Logs**
+2. Busca mensajes relacionados con "mqtt" o "timbres"
+3. Si ves errores de JSON inválido, contacta al desarrollador
+
+**Paso 6: Reiniciar servicios**
+
+Como último recurso:
+1. Reinicia el ESP32 (desconecta y reconecta la alimentación)
+2. Reinicia Home Assistant
+3. Espera 1 minuto para que se conecten
+4. Verifica de nuevo en **Settings → Devices & Services → MQTT**
 
 ### Los switches no funcionan
 
