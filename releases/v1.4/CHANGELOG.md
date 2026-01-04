@@ -14,6 +14,10 @@
   - Todos los switches de horarios usan `mdi:calendar-clock`
   - Todos los botones de prueba de timbres usan `mdi:bell-ring`
 - **Nombre de dispositivo actualizado**: Cambio de "ESP32 Bell Controller" a "Bell Controller" en Home Assistant
+- **Logos optimizados**:
+  - `logo-tora-or.png` reducido de 408KB a 38KB (90.8% reducción)
+  - `poweredlight.png` reducido de 18.3KB a 9.2KB (50% reducción)
+  - **Resultado**: Carga de páginas web significativamente más rápida
 
 ### 🐛 Correcciones de errores
 
@@ -54,7 +58,9 @@
 **Archivos modificados:**
 - `src/main.cpp`: Mejoras en MQTT y restore
 - `data/config.html`: Fix en manejo de errores de restore
-- `data/index.html`: Actualización de sincronización de switches (sin cambios en esta versión)
+- `data/index.html`: Actualización de sincronización de switches
+- `data/logo-tora-or.png`: Optimizado para carga rápida
+- `data/poweredlight.png`: Optimizado para carga rápida
 
 **Compatibilidad:**
 - ✅ Compatible con backups de v1.3, v1.2, v1.1 y v1.0
