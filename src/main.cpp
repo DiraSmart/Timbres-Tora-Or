@@ -70,7 +70,7 @@ const int MQTT_BUFFER_SIZE = 1024; // Aumentar buffer para mensajes de discovery
 
 // MQTT Topics
 const String MQTT_BASE_TOPIC = "timbres";
-bool globalSystemEnabled = true; // Switch global para activar/desactivar sistema
+// REMOVED: globalSystemEnabled (obsoleto desde v1.5)
 bool schedulesEnabled = true; // Switch global para activar/desactivar TODOS los horarios
 bool daySchedulesEnabled[7] = {true, true, true, true, true, false, true}; // Switch individual por día (L-D, sábado=false)
 
@@ -330,9 +330,8 @@ void cleanOldMQTTDiscovery() {
     delay(50);
   }
 
-  // Limpiar switches globales (system y schedules)
-  mqttClient.publish("homeassistant/switch/timbres/system/config", "", true);
-  delay(50);
+  // REMOVED: Limpieza del switch global /system (obsoleto desde v1.5)
+  // Limpiar switch global de schedules (aún se usa, pero se limpia para republicar)
   mqttClient.publish("homeassistant/switch/timbres/schedules/config", "", true);
   delay(50);
 
@@ -404,7 +403,7 @@ void publishMQTTDiscovery() {
     doc["device"]["name"] = "Sistema Timbres Tora Or";
     doc["device"]["manufacturer"] = "DiraSmart";
     doc["device"]["model"] = "Bell Controller";
-    doc["device"]["sw_version"] = "1.5";
+    doc["device"]["sw_version"] = "1.6";
 
     serializeJson(doc, payload);
     bool published = mqttClient.publish(discoveryTopic.c_str(), payload.c_str(), true);
@@ -438,7 +437,7 @@ void publishMQTTDiscovery() {
   doc["device"]["name"] = "Sistema Timbres Tora Or";
   doc["device"]["manufacturer"] = "DiraSmart";
   doc["device"]["model"] = "ESP32 Bell Controller";
-  doc["device"]["sw_version"] = "1.5";
+  doc["device"]["sw_version"] = "1.6";
 
   serializeJson(doc, payload);
   mqttClient.publish(discoveryTopic.c_str(), payload.c_str(), true);
@@ -479,7 +478,7 @@ void publishMQTTDiscovery() {
     doc["device"]["name"] = "Sistema Timbres Tora Or";
     doc["device"]["manufacturer"] = "DiraSmart";
     doc["device"]["model"] = "Bell Controller";
-    doc["device"]["sw_version"] = "1.5";
+    doc["device"]["sw_version"] = "1.6";
 
     serializeJson(doc, payload);
     bool published = mqttClient.publish(discoveryTopic.c_str(), payload.c_str(), true);
@@ -518,7 +517,7 @@ void publishMQTTDiscovery() {
   doc["device"]["name"] = "Sistema Timbres Tora Or";
   doc["device"]["manufacturer"] = "DiraSmart";
   doc["device"]["model"] = "Bell Controller";
-  doc["device"]["sw_version"] = "1.5";
+  doc["device"]["sw_version"] = "1.6";
 
   serializeJson(doc, payload);
   mqttClient.publish(discoveryTopic.c_str(), payload.c_str(), true);
@@ -542,7 +541,7 @@ void publishMQTTDiscovery() {
   doc["device"]["name"] = "Sistema Timbres Tora Or";
   doc["device"]["manufacturer"] = "DiraSmart";
   doc["device"]["model"] = "Bell Controller";
-  doc["device"]["sw_version"] = "1.5";
+  doc["device"]["sw_version"] = "1.6";
 
   serializeJson(doc, payload);
   mqttClient.publish(discoveryTopic.c_str(), payload.c_str(), true);
@@ -578,7 +577,7 @@ void publishMQTTDiscovery() {
     doc["device"]["name"] = "Sistema Timbres Tora Or";
     doc["device"]["manufacturer"] = "DiraSmart";
     doc["device"]["model"] = "Bell Controller";
-    doc["device"]["sw_version"] = "1.5";
+    doc["device"]["sw_version"] = "1.6";
 
     serializeJson(doc, payload);
     bool published = mqttClient.publish(discoveryTopic.c_str(), payload.c_str(), true);
@@ -630,7 +629,7 @@ boolean reconnectMQTT() {
       String topic = MQTT_BASE_TOPIC + "/bell" + String(i) + "/set";
       mqttClient.subscribe(topic.c_str());
     }
-    mqttClient.subscribe((MQTT_BASE_TOPIC + "/system/set").c_str());
+    // REMOVED: Suscripción a /system/set (obsoleto desde v1.5)
 
     // Suscribirse a topics de control de horarios
     mqttClient.subscribe((MQTT_BASE_TOPIC + "/schedules/set").c_str());
@@ -853,9 +852,11 @@ void saveSchedulesSwitchStates();
 
 // Funciones de autenticación
 String generateToken() {
+  // SECURITY: Usar esp_random() en lugar de random() para generación criptográficamente segura
   String token = "";
   for (int i = 0; i < 32; i++) {
-    token += String(random(0, 16), HEX);
+    uint32_t randomValue = esp_random();
+    token += String(randomValue % 16, HEX);
   }
   return token;
 }
@@ -2091,15 +2092,16 @@ void handleSaveDayVisibility() {
 
 // Crear backup completo del sistema
 void handleBackup() {
-  if (!checkAuth()) {
-    server.send(401, "application/json", "{\"success\":false,\"error\":\"No autenticado\"}");
+  // SECURITY: Solo admin puede descargar backup (contiene contraseñas en texto plano)
+  if (!checkAdminAuth()) {
+    server.send(401, "application/json", "{\"success\":false,\"error\":\"Solo admin puede descargar backup\"}");
     return;
   }
 
   JsonDocument doc;
 
   // Información de versión y timestamp
-  doc["version"] = "1.5";
+  doc["version"] = "1.6";
   doc["timestamp"] = millis();
   doc["device"] = "Tora-Or";
 
@@ -2590,10 +2592,27 @@ void handleOTAPage() {
 
 // Manejar actualización OTA
 void handleOTAUpdate() {
-  // OTA update is now accessible without authentication
+  // SECURITY: Verificar autenticación de administrador antes de permitir OTA
+  static bool otaAuthChecked = false;
+  static bool otaAuthPassed = false;
+
   HTTPUpload& upload = server.upload();
 
   if (upload.status == UPLOAD_FILE_START) {
+    // Verificar autenticación solo al inicio del upload
+    otaAuthChecked = false;
+    otaAuthPassed = false;
+
+    if (!checkAdminAuth()) {
+      Serial.println("[SECURITY] Intento de OTA sin autenticación admin - BLOQUEADO");
+      otaAuthChecked = true;
+      otaAuthPassed = false;
+      return;
+    }
+
+    otaAuthChecked = true;
+    otaAuthPassed = true;
+
     Serial.printf("Actualización OTA: %s\n", upload.filename.c_str());
 
     // Comenzar actualización OTA
@@ -2602,12 +2621,23 @@ void handleOTAUpdate() {
     }
   }
   else if (upload.status == UPLOAD_FILE_WRITE) {
+    // No escribir si la autenticación falló
+    if (!otaAuthChecked || !otaAuthPassed) {
+      return;
+    }
+
     // Escribir datos del firmware
     if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
       Update.printError(Serial);
     }
   }
   else if (upload.status == UPLOAD_FILE_END) {
+    // No procesar si la autenticación falló
+    if (!otaAuthChecked || !otaAuthPassed) {
+      server.send(401, "text/plain", "Unauthorized - Admin access required");
+      return;
+    }
+
     if (Update.end(true)) {
       Serial.printf("Actualización exitosa: %u bytes\n", upload.totalSize);
       server.send(200, "text/plain", "OK");

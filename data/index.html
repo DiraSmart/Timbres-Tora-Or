@@ -805,7 +805,7 @@
             await loadSchedulesSwitches();
             updateCurrentTime();
             setInterval(updateCurrentTime, 1000);
-            setInterval(loadSchedulesSwitches, 2000); // Actualizar switches cada 2 segundos
+            setInterval(loadSchedulesSwitches, 15000); // Actualizar switches cada 15 segundos (optimizado en v1.6)
 
             // Ocultar botón de configuración si no es admin
             if (!isAdmin) {
@@ -1501,6 +1501,13 @@
                 schedules[editingScheduleId] = schedule;
             } else {
                 // Modo agregar: crear un horario por cada timbre seleccionado
+                // VALIDACIÓN: Verificar límite de 80 horarios
+                const newSchedulesCount = selectedBells.length;
+                if (schedules.length + newSchedulesCount > 80) {
+                    alert(`No se pueden agregar ${newSchedulesCount} horario(s). Límite máximo: 80 horarios.\nActualmente tienes: ${schedules.length} horarios.\nEspacio disponible: ${80 - schedules.length} horarios.`);
+                    return;
+                }
+
                 selectedBells.forEach(bell => {
                     const schedule = {
                         name: scheduleName,
