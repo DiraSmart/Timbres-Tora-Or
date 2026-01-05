@@ -28,6 +28,9 @@ int bellDurations[4] = {3000, 3000, 3000, 3000};
 // Visibilidad de timbres (por defecto todos visibles)
 bool bellVisibility[4] = {true, true, true, true};
 
+// Visibilidad de días (por defecto L-V visibles, Sábado oculto, Domingo visible)
+bool dayVisibility[7] = {true, true, true, true, true, false, true};
+
 // Timeouts y configuración
 const unsigned long WIFI_CONNECT_TIMEOUT = 10000; // 10 segundos intentando conectar
 const unsigned long WIFI_RETRY_INTERVAL = 120000; // 2 minutos entre reintentos
@@ -69,7 +72,7 @@ const int MQTT_BUFFER_SIZE = 1024; // Aumentar buffer para mensajes de discovery
 const String MQTT_BASE_TOPIC = "timbres";
 bool globalSystemEnabled = true; // Switch global para activar/desactivar sistema
 bool schedulesEnabled = true; // Switch global para activar/desactivar TODOS los horarios
-bool bellSchedulesEnabled[4] = {true, true, true, true}; // Switch individual por timbre
+bool daySchedulesEnabled[7] = {true, true, true, true, true, false, true}; // Switch individual por día (L-D, sábado=false)
 
 // Forward declarations
 void activateBell(int bellIndex);
@@ -239,7 +242,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   for (int i = 0; i < 4; i++) {
     String bellTopic = MQTT_BASE_TOPIC + "/bell" + String(i) + "/set";
     if (topicStr == bellTopic) {
-      if (message == "ON" && globalSystemEnabled) {
+      if (message == "ON") {
         activateBell(i);
         mqttClient.publish((MQTT_BASE_TOPIC + "/bell" + String(i) + "/state").c_str(), "ON", true);
       }
@@ -247,53 +250,48 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     }
   }
 
-  // Switch global del sistema
-  if (topicStr == MQTT_BASE_TOPIC + "/system/set") {
-    globalSystemEnabled = (message == "ON");
-    mqttClient.publish((MQTT_BASE_TOPIC + "/system/state").c_str(), globalSystemEnabled ? "ON" : "OFF", true);
-    Serial.printf("Sistema global: %s\n", globalSystemEnabled ? "ACTIVADO" : "DESACTIVADO");
-    return;
-  }
-
   // Switch global de horarios
   if (topicStr == MQTT_BASE_TOPIC + "/schedules/set") {
     schedulesEnabled = (message == "ON");
-
-    // Actualizar también todos los switches individuales de los timbres
-    for (int i = 0; i < 4; i++) {
-      bellSchedulesEnabled[i] = schedulesEnabled;
-      // Publicar estado de cada switch individual
-      String bellStateTopic = MQTT_BASE_TOPIC + "/bell" + String(i) + "/schedules/state";
-      String bellStatePayload = schedulesEnabled ? "ON" : "OFF";
-      mqttClient.publish(bellStateTopic.c_str(), bellStatePayload.c_str(), true);
-      Serial.printf("  └─ Horarios %s: %s\n",
-                    bellNames[i].c_str(),
-                    schedulesEnabled ? "ACTIVADOS" : "DESACTIVADOS");
-    }
-
     String stateTopic = MQTT_BASE_TOPIC + "/schedules/state";
     String statePayload = schedulesEnabled ? "ON" : "OFF";
-    bool published = mqttClient.publish(stateTopic.c_str(), statePayload.c_str(), true);
+    bool published = mqttClient.publish(stateTopic.c_str(), statePayload.c_str(), false);
     Serial.printf("Horarios globales: %s | Publicado a %s: %s [%s]\n",
                   schedulesEnabled ? "ACTIVADOS" : "DESACTIVADOS",
                   stateTopic.c_str(),
                   statePayload.c_str(),
                   published ? "OK" : "FAILED");
+
+    // Actualizar todos los switches de días, pero solo los que están visibles
+    const char* dayNames[] = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"};
+    for (int i = 0; i < 7; i++) {
+      if (dayVisibility[i]) {
+        // Solo cambiar el estado si el día está visible
+        daySchedulesEnabled[i] = schedulesEnabled;
+        String dayStateTopic = MQTT_BASE_TOPIC + "/day/" + String(dayNames[i]) + "/schedules/state";
+        String dayStatePayload = daySchedulesEnabled[i] ? "ON" : "OFF";
+        mqttClient.publish(dayStateTopic.c_str(), dayStatePayload.c_str(), false);
+      }
+      // Los días no visibles mantienen su estado (típicamente OFF)
+    }
+
     saveSchedulesSwitchStates(); // Persistir el cambio
     return;
   }
 
-  // Switches individuales de horarios por timbre
-  for (int i = 0; i < 4; i++) {
-    String schedTopic = MQTT_BASE_TOPIC + "/bell" + String(i) + "/schedules/set";
-    if (topicStr == schedTopic) {
-      bellSchedulesEnabled[i] = (message == "ON");
-      String stateTopic = MQTT_BASE_TOPIC + "/bell" + String(i) + "/schedules/state";
-      String statePayload = bellSchedulesEnabled[i] ? "ON" : "OFF";
-      bool published = mqttClient.publish(stateTopic.c_str(), statePayload.c_str(), true);
+  // Switches individuales de horarios por día
+  const char* dayNames[] = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"};
+  const char* dayNamesEs[] = {"Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"};
+  for (int i = 0; i < 7; i++) {
+    String dayTopic = MQTT_BASE_TOPIC + "/day/" + String(dayNames[i]) + "/schedules/set";
+    if (topicStr == dayTopic) {
+      daySchedulesEnabled[i] = (message == "ON");
+      String stateTopic = MQTT_BASE_TOPIC + "/day/" + String(dayNames[i]) + "/schedules/state";
+      String statePayload = daySchedulesEnabled[i] ? "ON" : "OFF";
+      bool published = mqttClient.publish(stateTopic.c_str(), statePayload.c_str(), false);
       Serial.printf("Horarios %s: %s | Publicado a %s: %s [%s]\n",
-                    bellNames[i].c_str(),
-                    bellSchedulesEnabled[i] ? "ACTIVADOS" : "DESACTIVADOS",
+                    dayNamesEs[i],
+                    daySchedulesEnabled[i] ? "ACTIVADOS" : "DESACTIVADOS",
                     stateTopic.c_str(),
                     statePayload.c_str(),
                     published ? "OK" : "FAILED");
@@ -338,6 +336,28 @@ void cleanOldMQTTDiscovery() {
   mqttClient.publish("homeassistant/switch/timbres/schedules/config", "", true);
   delay(50);
 
+  // Limpiar switches de días (todos, incluyendo los que no son visibles)
+  const char* dayNames[] = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"};
+  for (int i = 0; i < 7; i++) {
+    String dayTopic = "homeassistant/switch/timbres/day_" + String(dayNames[i]) + "_schedules/config";
+    mqttClient.publish(dayTopic.c_str(), "", true);
+    delay(50);
+  }
+
+  // Limpiar binary sensors de timbres (todos)
+  for (int i = 0; i < 4; i++) {
+    String sensorTopic = "homeassistant/binary_sensor/timbres/bell" + String(i) + "_active/config";
+    mqttClient.publish(sensorTopic.c_str(), "", true);
+    delay(50);
+  }
+
+  // Limpiar sensores timestamp antiguos (si existen)
+  for (int i = 0; i < 4; i++) {
+    String timestampTopic = "homeassistant/sensor/timbres/bell" + String(i) + "_last_activation/config";
+    mqttClient.publish(timestampTopic.c_str(), "", true);
+    delay(50);
+  }
+
   // Limpiar sensores
   mqttClient.publish("homeassistant/sensor/timbres/wifi_signal/config", "", true);
   delay(50);
@@ -377,13 +397,14 @@ void publishMQTTDiscovery() {
     doc["command_topic"] = MQTT_BASE_TOPIC + "/bell" + String(i) + "/set";
     doc["payload_press"] = "ON";
     doc["icon"] = "mdi:bell-ring";
+    doc["entity_category"] = "config";
 
     JsonArray identifiers = doc["device"]["identifiers"].to<JsonArray>();
     identifiers.add("timbres_tora_or");
     doc["device"]["name"] = "Sistema Timbres Tora Or";
     doc["device"]["manufacturer"] = "DiraSmart";
     doc["device"]["model"] = "Bell Controller";
-    doc["device"]["sw_version"] = "1.4";
+    doc["device"]["sw_version"] = "1.5";
 
     serializeJson(doc, payload);
     bool published = mqttClient.publish(discoveryTopic.c_str(), payload.c_str(), true);
@@ -417,7 +438,7 @@ void publishMQTTDiscovery() {
   doc["device"]["name"] = "Sistema Timbres Tora Or";
   doc["device"]["manufacturer"] = "DiraSmart";
   doc["device"]["model"] = "ESP32 Bell Controller";
-  doc["device"]["sw_version"] = "1.4";
+  doc["device"]["sw_version"] = "1.5";
 
   serializeJson(doc, payload);
   mqttClient.publish(discoveryTopic.c_str(), payload.c_str(), true);
@@ -429,45 +450,47 @@ void publishMQTTDiscovery() {
   payload = "";
   delay(100);
 
-  // Switches individuales de horarios por timbre
-  for (int i = 0; i < 4; i++) {
-    // Solo publicar si el timbre es visible
-    if (!bellVisibility[i]) {
-      Serial.printf("Timbre %d no visible, omitiendo switch de horarios\n", i);
+  // Switches individuales de horarios por día
+  const char* dayNames[] = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"};
+  const char* dayNamesEs[] = {"Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"};
+  for (int i = 0; i < 7; i++) {
+    // Solo publicar días que están visibles (al igual que los timbres)
+    if (!dayVisibility[i]) {
+      Serial.printf("⊘ Día %s oculto - no se publica en MQTT\n", dayNamesEs[i]);
       continue;
     }
 
     doc.clear();
-    discoveryTopic = "homeassistant/switch/timbres/bell" + String(i) + "_schedules/config";
+    discoveryTopic = "homeassistant/switch/timbres/day_" + String(dayNames[i]) + "_schedules/config";
 
-    doc["name"] = "Horarios " + bellNames[i];
-    doc["object_id"] = "horarios_timbre_" + String(i + 1);
-    doc["unique_id"] = "timbres_bell_" + String(i) + "_schedules";
-    doc["command_topic"] = MQTT_BASE_TOPIC + "/bell" + String(i) + "/schedules/set";
-    doc["state_topic"] = MQTT_BASE_TOPIC + "/bell" + String(i) + "/schedules/state";
+    doc["name"] = "Horarios " + String(dayNamesEs[i]);
+    doc["object_id"] = "horarios_" + String(dayNames[i]);
+    doc["unique_id"] = "timbres_day_" + String(dayNames[i]) + "_schedules";
+    doc["command_topic"] = MQTT_BASE_TOPIC + "/day/" + String(dayNames[i]) + "/schedules/set";
+    doc["state_topic"] = MQTT_BASE_TOPIC + "/day/" + String(dayNames[i]) + "/schedules/state";
     doc["payload_on"] = "ON";
     doc["payload_off"] = "OFF";
     doc["optimistic"] = false;
     doc["retain"] = true;
     doc["icon"] = "mdi:calendar-clock";
 
-    JsonArray identifiers_bell_sched = doc["device"]["identifiers"].to<JsonArray>();
-    identifiers_bell_sched.add("timbres_tora_or");
+    JsonArray identifiers_day_sched = doc["device"]["identifiers"].to<JsonArray>();
+    identifiers_day_sched.add("timbres_tora_or");
     doc["device"]["name"] = "Sistema Timbres Tora Or";
     doc["device"]["manufacturer"] = "DiraSmart";
     doc["device"]["model"] = "Bell Controller";
-    doc["device"]["sw_version"] = "1.4";
+    doc["device"]["sw_version"] = "1.5";
 
     serializeJson(doc, payload);
     bool published = mqttClient.publish(discoveryTopic.c_str(), payload.c_str(), true);
     Serial.printf("✓ Discovery publicado para 'Horarios %s' [%s] - Size: %d bytes\n",
-                  bellNames[i].c_str(),
+                  dayNamesEs[i],
                   published ? "OK" : "FAILED",
                   payload.length());
 
     // Publicar estado inicial
-    mqttClient.publish((MQTT_BASE_TOPIC + "/bell" + String(i) + "/schedules/state").c_str(),
-                       bellSchedulesEnabled[i] ? "ON" : "OFF", true);
+    mqttClient.publish((MQTT_BASE_TOPIC + "/day/" + String(dayNames[i]) + "/schedules/state").c_str(),
+                       daySchedulesEnabled[i] ? "ON" : "OFF", true);
 
     payload = "";
     delay(100);
@@ -485,13 +508,17 @@ void publishMQTTDiscovery() {
   doc["device_class"] = "signal_strength";
   doc["state_class"] = "measurement";
   doc["icon"] = "mdi:wifi";
+  doc["entity_category"] = "diagnostic";
+  doc["availability_topic"] = MQTT_BASE_TOPIC + "/status";
+  doc["payload_available"] = "online";
+  doc["payload_not_available"] = "offline";
 
   JsonArray identifiers3 = doc["device"]["identifiers"].to<JsonArray>();
   identifiers3.add("timbres_tora_or");
   doc["device"]["name"] = "Sistema Timbres Tora Or";
   doc["device"]["manufacturer"] = "DiraSmart";
-  doc["device"]["model"] = "ESP32 Bell Controller";
-  doc["device"]["sw_version"] = "1.4";
+  doc["device"]["model"] = "Bell Controller";
+  doc["device"]["sw_version"] = "1.5";
 
   serializeJson(doc, payload);
   mqttClient.publish(discoveryTopic.c_str(), payload.c_str(), true);
@@ -508,18 +535,64 @@ void publishMQTTDiscovery() {
   doc["unique_id"] = "timbres_ip_address";
   doc["state_topic"] = MQTT_BASE_TOPIC + "/wifi/ip";
   doc["icon"] = "mdi:ip-network";
+  doc["entity_category"] = "diagnostic";
 
   JsonArray identifiers4 = doc["device"]["identifiers"].to<JsonArray>();
   identifiers4.add("timbres_tora_or");
   doc["device"]["name"] = "Sistema Timbres Tora Or";
   doc["device"]["manufacturer"] = "DiraSmart";
-  doc["device"]["model"] = "ESP32 Bell Controller";
-  doc["device"]["sw_version"] = "1.4";
+  doc["device"]["model"] = "Bell Controller";
+  doc["device"]["sw_version"] = "1.5";
 
   serializeJson(doc, payload);
   mqttClient.publish(discoveryTopic.c_str(), payload.c_str(), true);
   Serial.println("✓ Discovery publicado para sensor IP");
   payload = "";
+
+  // Binary sensors de estado activo para cada timbre
+  const char* bellSensorNames[] = {"Timbre 1", "Timbre 2", "Timbre 3", "Timbre 4"};
+  for (int i = 0; i < 4; i++) {
+    // Solo publicar sensores de timbres visibles
+    if (!bellVisibility[i]) {
+      Serial.printf("⊘ Sensor activo %s oculto - no se publica en MQTT\n", bellSensorNames[i]);
+      continue;
+    }
+
+    doc.clear();
+    discoveryTopic = "homeassistant/binary_sensor/timbres/bell" + String(i) + "_active/config";
+
+    doc["name"] = String(bellNames[i]) + " - Activo";
+    doc["object_id"] = "timbre_" + String(i + 1) + "_activo";
+    doc["unique_id"] = "timbres_bell" + String(i) + "_active";
+    doc["state_topic"] = MQTT_BASE_TOPIC + "/bell" + String(i) + "/active";
+    doc["payload_on"] = "ON";
+    doc["payload_off"] = "OFF";
+    doc["device_class"] = "running";
+    doc["icon"] = "mdi:bell-ring";
+    doc["availability_topic"] = MQTT_BASE_TOPIC + "/status";
+    doc["payload_available"] = "online";
+    doc["payload_not_available"] = "offline";
+
+    JsonArray identifiers5 = doc["device"]["identifiers"].to<JsonArray>();
+    identifiers5.add("timbres_tora_or");
+    doc["device"]["name"] = "Sistema Timbres Tora Or";
+    doc["device"]["manufacturer"] = "DiraSmart";
+    doc["device"]["model"] = "Bell Controller";
+    doc["device"]["sw_version"] = "1.5";
+
+    serializeJson(doc, payload);
+    bool published = mqttClient.publish(discoveryTopic.c_str(), payload.c_str(), true);
+    Serial.printf("✓ Discovery publicado para binary sensor activo %s [%s]\n",
+                  bellNames[i].c_str(),
+                  published ? "OK" : "FAILED");
+
+    // Publicar estado inicial (OFF)
+    String activeTopic = MQTT_BASE_TOPIC + "/bell" + String(i) + "/active";
+    mqttClient.publish(activeTopic.c_str(), "OFF", true);
+
+    payload = "";
+    delay(100);
+  }
 
   Serial.println("✅ Auto-descubrimiento publicado exitosamente");
 
@@ -537,11 +610,16 @@ boolean reconnectMQTT() {
 
   Serial.print("Intentando conexión MQTT...");
 
+  // Configurar Last Will and Testament (LWT) para detectar desconexiones
+  String lwt_topic = MQTT_BASE_TOPIC + "/status";
+
   boolean connected = false;
   if (mqtt_user.length() > 0) {
-    connected = mqttClient.connect(mqtt_client_id.c_str(), mqtt_user.c_str(), mqtt_password.c_str());
+    connected = mqttClient.connect(mqtt_client_id.c_str(), mqtt_user.c_str(), mqtt_password.c_str(),
+                                   lwt_topic.c_str(), 0, true, "offline");
   } else {
-    connected = mqttClient.connect(mqtt_client_id.c_str());
+    connected = mqttClient.connect(mqtt_client_id.c_str(), NULL, NULL,
+                                   lwt_topic.c_str(), 0, true, "offline");
   }
 
   if (connected) {
@@ -556,25 +634,34 @@ boolean reconnectMQTT() {
 
     // Suscribirse a topics de control de horarios
     mqttClient.subscribe((MQTT_BASE_TOPIC + "/schedules/set").c_str());
-    for (int i = 0; i < 4; i++) {
-      String schedTopic = MQTT_BASE_TOPIC + "/bell" + String(i) + "/schedules/set";
-      mqttClient.subscribe(schedTopic.c_str());
+
+    // Suscribirse a topics de control de horarios por día (solo días visibles)
+    const char* dayNames[] = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"};
+    for (int i = 0; i < 7; i++) {
+      if (!dayVisibility[i]) {
+        continue; // No suscribirse a días ocultos
+      }
+      String dayTopic = MQTT_BASE_TOPIC + "/day/" + String(dayNames[i]) + "/schedules/set";
+      mqttClient.subscribe(dayTopic.c_str());
     }
 
     // Limpiar discovery antiguo y publicar nuevo
     cleanOldMQTTDiscovery();
     publishMQTTDiscovery();
 
-    // Publicar estado inicial del sistema global
-    mqttClient.publish((MQTT_BASE_TOPIC + "/system/state").c_str(), globalSystemEnabled ? "ON" : "OFF", true);
+    // Publicar estado "online" cuando se conecta
+    mqttClient.publish((MQTT_BASE_TOPIC + "/status").c_str(), "online", true);
 
     // Publicar estado inicial del switch global de horarios
-    mqttClient.publish((MQTT_BASE_TOPIC + "/schedules/state").c_str(), schedulesEnabled ? "ON" : "OFF", true);
+    mqttClient.publish((MQTT_BASE_TOPIC + "/schedules/state").c_str(), schedulesEnabled ? "ON" : "OFF", false);
 
-    // Publicar estado inicial de switches individuales de horarios
-    for (int i = 0; i < 4; i++) {
-      mqttClient.publish((MQTT_BASE_TOPIC + "/bell" + String(i) + "/schedules/state").c_str(),
-                         bellSchedulesEnabled[i] ? "ON" : "OFF", true);
+    // Publicar estado inicial de switches individuales de horarios por día (solo días visibles)
+    for (int i = 0; i < 7; i++) {
+      if (!dayVisibility[i]) {
+        continue; // No publicar estado de días ocultos
+      }
+      mqttClient.publish((MQTT_BASE_TOPIC + "/day/" + String(dayNames[i]) + "/schedules/state").c_str(),
+                         daySchedulesEnabled[i] ? "ON" : "OFF", false);
     }
 
     return true;
@@ -759,6 +846,8 @@ void loadNormalUser();
 void saveNormalUser();
 void loadBellVisibility();
 void saveBellVisibility();
+void loadDayVisibility();
+void saveDayVisibility();
 void loadSchedulesSwitchStates();
 void saveSchedulesSwitchStates();
 
@@ -863,6 +952,7 @@ void initFileSystem() {
   loadBellNames();
   loadBellDurations();
   loadBellVisibility();
+  loadDayVisibility();
   loadSchedulesSwitchStates(); // Cargar estados de switches de horarios
   loadSchedules();
   loadNormalUser();
@@ -997,6 +1087,49 @@ void saveBellVisibility() {
   Serial.println("Visibilidad de timbres guardada");
 }
 
+void loadDayVisibility() {
+  File file = LittleFS.open("/day_visibility.json", "r");
+  if (!file) {
+    Serial.println("No hay visibilidad de días personalizada, usando por defecto (L-V + D visible, S oculto)");
+    return;
+  }
+
+  JsonDocument doc;
+  DeserializationError error = deserializeJson(doc, file);
+  file.close();
+
+  if (error) {
+    Serial.println("Error deserializando visibilidad de días");
+    return;
+  }
+
+  JsonArray array = doc["visibility"].as<JsonArray>();
+  for (int i = 0; i < 7 && i < array.size(); i++) {
+    dayVisibility[i] = array[i].as<bool>();
+  }
+
+  Serial.println("Visibilidad de días cargada");
+}
+
+void saveDayVisibility() {
+  JsonDocument doc;
+  JsonArray array = doc["visibility"].to<JsonArray>();
+
+  for (int i = 0; i < 7; i++) {
+    array.add(dayVisibility[i]);
+  }
+
+  File file = LittleFS.open("/day_visibility.json", "w");
+  if (!file) {
+    Serial.println("Error guardando visibilidad de días");
+    return;
+  }
+
+  serializeJson(doc, file);
+  file.close();
+  Serial.println("Visibilidad de días guardada");
+}
+
 void loadSchedulesSwitchStates() {
   File file = LittleFS.open("/schedules_switches.json", "r");
   if (!file) {
@@ -1015,9 +1148,11 @@ void loadSchedulesSwitchStates() {
 
   schedulesEnabled = doc["global"] | true;
 
-  JsonArray array = doc["bells"].as<JsonArray>();
-  for (int i = 0; i < 4 && i < array.size(); i++) {
-    bellSchedulesEnabled[i] = array[i].as<bool>();
+  JsonArray daysArray = doc["days"].as<JsonArray>();
+  if (daysArray.size() > 0) {
+    for (int i = 0; i < 7 && i < daysArray.size(); i++) {
+      daySchedulesEnabled[i] = daysArray[i].as<bool>();
+    }
   }
 
   Serial.printf("Estados de switches de horarios cargados (Global: %s)\n", schedulesEnabled ? "ON" : "OFF");
@@ -1028,9 +1163,9 @@ void saveSchedulesSwitchStates() {
 
   doc["global"] = schedulesEnabled;
 
-  JsonArray array = doc["bells"].to<JsonArray>();
-  for (int i = 0; i < 4; i++) {
-    array.add(bellSchedulesEnabled[i]);
+  JsonArray daysArray = doc["days"].to<JsonArray>();
+  for (int i = 0; i < 7; i++) {
+    daysArray.add(daySchedulesEnabled[i]);
   }
 
   File file = LittleFS.open("/schedules_switches.json", "w");
@@ -1181,21 +1316,20 @@ void saveNormalUser(const String& username, const String& password) {
 void activateBell(int bellIndex) {
   if (bellIndex < 0 || bellIndex >= 4) return;
 
-  // Verificar si el sistema global está activado
-  if (!globalSystemEnabled) {
-    Serial.printf("Sistema desactivado. %s no se activará.\n", bellNames[bellIndex].c_str());
-    return;
-  }
-
   digitalWrite(RELAY_PINS[bellIndex], HIGH);
   bellActive[bellIndex] = true;
   bellStartTime[bellIndex] = millis();
+
   Serial.printf("%s activado\n", bellNames[bellIndex].c_str());
 
-  // Publicar estado y evento MQTT
+  // Publicar estado activo en MQTT
   if (mqttClient.connected()) {
     String stateTopic = MQTT_BASE_TOPIC + "/bell" + String(bellIndex) + "/state";
     mqttClient.publish(stateTopic.c_str(), "ON", true);
+
+    // Publicar binary sensor activo
+    String activeTopic = MQTT_BASE_TOPIC + "/bell" + String(bellIndex) + "/active";
+    mqttClient.publish(activeTopic.c_str(), "ON", true);
   }
   publishBellEvent(bellIndex, "activated");
 }
@@ -1213,6 +1347,10 @@ void updateBells() {
       if (mqttClient.connected()) {
         String stateTopic = MQTT_BASE_TOPIC + "/bell" + String(i) + "/state";
         mqttClient.publish(stateTopic.c_str(), "OFF", true);
+
+        // Publicar binary sensor inactivo
+        String activeTopic = MQTT_BASE_TOPIC + "/bell" + String(i) + "/active";
+        mqttClient.publish(activeTopic.c_str(), "OFF", true);
       }
       publishBellEvent(i, "deactivated");
     }
@@ -1239,13 +1377,13 @@ void checkSchedules() {
   for (int i = 0; i < scheduleCount; i++) {
     if (!schedules[i].enabled) continue;
 
-    // Verificar si los horarios de este timbre específico están habilitados
-    int bellIdx = schedules[i].bellIndex;
-    if (!bellSchedulesEnabled[bellIdx]) {
-      Serial.printf("[Horarios] Timbre %d tiene horarios DESACTIVADOS, saltando horario #%d\n", bellIdx, i);
+    // Verificar si los horarios de este día están habilitados
+    if (!daySchedulesEnabled[adjustedDay]) {
+      Serial.printf("[Horarios] Día %d tiene horarios DESACTIVADOS, saltando horario #%d\n", adjustedDay, i);
       continue;
     }
 
+    int bellIdx = schedules[i].bellIndex;
     if (schedules[i].hour == now.hour() &&
         schedules[i].minute == now.minute() &&
         schedules[i].days[adjustedDay]) {
@@ -1630,9 +1768,9 @@ void handleGetSchedulesSwitches() {
 
   doc["global"] = schedulesEnabled;
 
-  JsonArray bells = doc["bells"].to<JsonArray>();
-  for (int i = 0; i < 4; i++) {
-    bells.add(bellSchedulesEnabled[i]);
+  JsonArray days = doc["days"].to<JsonArray>();
+  for (int i = 0; i < 7; i++) {
+    days.add(daySchedulesEnabled[i]);
   }
 
   String response;
@@ -1659,19 +1797,20 @@ void handleSetSchedulesSwitches() {
     schedulesEnabled = doc["global"].as<bool>();
     // Publicar a MQTT
     if (mqttClient.connected()) {
-      mqttClient.publish((MQTT_BASE_TOPIC + "/schedules/state").c_str(), schedulesEnabled ? "ON" : "OFF", true);
+      mqttClient.publish((MQTT_BASE_TOPIC + "/schedules/state").c_str(), schedulesEnabled ? "ON" : "OFF", false);
     }
   }
 
-  // Actualizar switches individuales si están presentes
-  if (doc.containsKey("bells")) {
-    JsonArray bells = doc["bells"].as<JsonArray>();
-    for (int i = 0; i < 4 && i < bells.size(); i++) {
-      bellSchedulesEnabled[i] = bells[i].as<bool>();
+  // Actualizar switches individuales por día si están presentes
+  if (doc.containsKey("days")) {
+    JsonArray days = doc["days"].as<JsonArray>();
+    const char* dayNames[] = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"};
+    for (int i = 0; i < 7 && i < days.size(); i++) {
+      daySchedulesEnabled[i] = days[i].as<bool>();
       // Publicar a MQTT
       if (mqttClient.connected()) {
-        mqttClient.publish((MQTT_BASE_TOPIC + "/bell" + String(i) + "/schedules/state").c_str(),
-                           bellSchedulesEnabled[i] ? "ON" : "OFF", true);
+        mqttClient.publish((MQTT_BASE_TOPIC + "/day/" + String(dayNames[i]) + "/schedules/state").c_str(),
+                           daySchedulesEnabled[i] ? "ON" : "OFF", false);
       }
     }
   }
@@ -1902,6 +2041,54 @@ void handleSaveBellVisibility() {
   server.send(200, "application/json", "{\"success\":true}");
 }
 
+// Obtener visibilidad de días
+void handleGetDayVisibility() {
+  JsonDocument doc;
+  JsonArray array = doc["visibility"].to<JsonArray>();
+
+  for (int i = 0; i < 7; i++) {
+    array.add(dayVisibility[i]);
+  }
+
+  String response;
+  serializeJson(doc, response);
+  server.send(200, "application/json", response);
+}
+
+// Guardar visibilidad de días
+void handleSaveDayVisibility() {
+  if (!server.hasArg("plain")) {
+    server.send(400, "text/plain", "No se recibieron datos");
+    return;
+  }
+
+  JsonDocument doc;
+  DeserializationError error = deserializeJson(doc, server.arg("plain"));
+
+  if (error) {
+    server.send(400, "text/plain", "JSON inválido");
+    return;
+  }
+
+  JsonArray array = doc["visibility"].as<JsonArray>();
+
+  // Validar que al menos un día esté visible
+  bool atLeastOneVisible = false;
+  for (int i = 0; i < 7 && i < array.size(); i++) {
+    bool visible = array[i].as<bool>();
+    dayVisibility[i] = visible;
+    if (visible) atLeastOneVisible = true;
+  }
+
+  if (!atLeastOneVisible) {
+    server.send(400, "application/json", "{\"success\":false,\"error\":\"Al menos un día debe estar visible\"}");
+    return;
+  }
+
+  saveDayVisibility();
+  server.send(200, "application/json", "{\"success\":true}");
+}
+
 // Crear backup completo del sistema
 void handleBackup() {
   if (!checkAuth()) {
@@ -1912,7 +2099,7 @@ void handleBackup() {
   JsonDocument doc;
 
   // Información de versión y timestamp
-  doc["version"] = "1.4";
+  doc["version"] = "1.5";
   doc["timestamp"] = millis();
   doc["device"] = "Tora-Or";
 
@@ -1959,6 +2146,12 @@ void handleBackup() {
     visibilityArray.add(bellVisibility[i]);
   }
 
+  // Visibilidad de días
+  JsonArray dayVisibilityArray = doc["dayVisibility"].to<JsonArray>();
+  for (int i = 0; i < 7; i++) {
+    dayVisibilityArray.add(dayVisibility[i]);
+  }
+
   // Usuario normal (incluye username y contraseña)
   if (normalUserConfigured) {
     doc["normalUserConfigured"] = true;
@@ -1980,6 +2173,13 @@ void handleBackup() {
     doc["mqttHADiscovery"] = mqtt_ha_discovery;
   } else {
     doc["mqttConfigured"] = false;
+  }
+
+  // Estados de switches de horarios
+  doc["schedulesEnabled"] = schedulesEnabled;
+  JsonArray daySchedulesArray = doc["daySchedulesEnabled"].to<JsonArray>();
+  for (int i = 0; i < 7; i++) {
+    daySchedulesArray.add(daySchedulesEnabled[i]);
   }
 
   String response;
@@ -2085,6 +2285,16 @@ void handleRestore() {
     Serial.println("Visibilidad de timbres restaurada");
   }
 
+  // Restaurar visibilidad de días
+  if (doc.containsKey("dayVisibility")) {
+    JsonArray dayVisibilityArray = doc["dayVisibility"].as<JsonArray>();
+    for (int i = 0; i < 7 && i < dayVisibilityArray.size(); i++) {
+      dayVisibility[i] = dayVisibilityArray[i].as<bool>();
+    }
+    saveDayVisibility();
+    Serial.println("Visibilidad de días restaurada");
+  }
+
   // Restaurar usuario normal (username y contraseña)
   if (doc["normalUserConfigured"].as<bool>() && doc.containsKey("normalUsername")) {
     String username = doc["normalUsername"].as<String>();
@@ -2118,6 +2328,19 @@ void handleRestore() {
       mqttNeedsReconnect = true;
     }
   }
+
+  // Restaurar estados de switches de horarios
+  if (doc.containsKey("schedulesEnabled")) {
+    schedulesEnabled = doc["schedulesEnabled"].as<bool>();
+  }
+  if (doc.containsKey("daySchedulesEnabled")) {
+    JsonArray daySchedulesArray = doc["daySchedulesEnabled"].as<JsonArray>();
+    for (int i = 0; i < 7 && i < daySchedulesArray.size(); i++) {
+      daySchedulesEnabled[i] = daySchedulesArray[i].as<bool>();
+    }
+  }
+  saveSchedulesSwitchStates();
+  Serial.println("Estados de switches de horarios restaurados");
 
   // Enviar respuesta HTTP PRIMERO, antes de cualquier reconexión
   if (success) {
@@ -2553,6 +2776,8 @@ void initWebServer() {
   server.on("/api/bell-durations", HTTP_POST, handleSaveBellDurations);
   server.on("/api/bell-visibility", HTTP_GET, handleGetBellVisibility);
   server.on("/api/bell-visibility", HTTP_POST, handleSaveBellVisibility);
+  server.on("/api/day-visibility", HTTP_GET, handleGetDayVisibility);
+  server.on("/api/day-visibility", HTTP_POST, handleSaveDayVisibility);
   server.on("/api/schedules", HTTP_GET, handleGetSchedules);
   server.on("/api/schedules", HTTP_POST, handleSaveSchedules);
   server.on("/api/time", HTTP_GET, handleGetTime);

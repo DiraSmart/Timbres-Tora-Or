@@ -100,7 +100,7 @@
 
         .bell-test {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(4, 1fr);
             gap: 15px;
             margin-bottom: 20px;
         }
@@ -343,7 +343,7 @@
             }
 
             .bell-test {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, 1fr);
             }
         }
     </style>
@@ -544,39 +544,105 @@
                 </div>
             </div>
 
-            <!-- Visibilidad de Timbres -->
+            <!-- Configuración de Timbres -->
             <div class="section">
-                <h2>👁️ Visibilidad de Timbres</h2>
-                <p style="color: #718096; margin-bottom: 20px;">Selecciona qué timbres deseas mostrar en el panel principal. Útil si solo tienes algunos timbres físicamente conectados.</p>
+                <h2>🔔 Configuración de Timbres</h2>
+                <p style="color: #718096; margin-bottom: 20px;">Configura la visibilidad, nombre y duración de cada timbre. Los timbres ocultos no aparecerán en el panel principal.</p>
 
                 <form id="visibilityForm" onsubmit="saveBellVisibility(event)">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                        <div style="background: #f7fafc; padding: 15px; border-radius: 10px; border: 2px solid #e2e8f0;">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <label style="display: flex; align-items: center; cursor: pointer; flex: 1;">
+                                    <input type="checkbox" id="bell0Visible" checked style="width: 20px; height: 20px; margin-right: 10px;">
+                                    <span style="font-weight: 600; color: #667eea;" id="visLabel0">Timbre 1</span>
+                                </label>
+                                <button type="button" onclick="openEditBellModal(0)" style="background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 5px; color: #667eea;" title="Editar nombre y duración">✏️</button>
+                            </div>
+                        </div>
+                        <div style="background: #f7fafc; padding: 15px; border-radius: 10px; border: 2px solid #e2e8f0;">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <label style="display: flex; align-items: center; cursor: pointer; flex: 1;">
+                                    <input type="checkbox" id="bell1Visible" checked style="width: 20px; height: 20px; margin-right: 10px;">
+                                    <span style="font-weight: 600; color: #48bb78;" id="visLabel1">Timbre 2</span>
+                                </label>
+                                <button type="button" onclick="openEditBellModal(1)" style="background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 5px; color: #48bb78;" title="Editar nombre y duración">✏️</button>
+                            </div>
+                        </div>
+                        <div style="background: #f7fafc; padding: 15px; border-radius: 10px; border: 2px solid #e2e8f0;">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <label style="display: flex; align-items: center; cursor: pointer; flex: 1;">
+                                    <input type="checkbox" id="bell2Visible" checked style="width: 20px; height: 20px; margin-right: 10px;">
+                                    <span style="font-weight: 600; color: #ed8936;" id="visLabel2">Timbre 3</span>
+                                </label>
+                                <button type="button" onclick="openEditBellModal(2)" style="background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 5px; color: #ed8936;" title="Editar nombre y duración">✏️</button>
+                            </div>
+                        </div>
+                        <div style="background: #f7fafc; padding: 15px; border-radius: 10px; border: 2px solid #e2e8f0;">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <label style="display: flex; align-items: center; cursor: pointer; flex: 1;">
+                                    <input type="checkbox" id="bell3Visible" checked style="width: 20px; height: 20px; margin-right: 10px;">
+                                    <span style="font-weight: 600; color: #9f7aea;" id="visLabel3">Timbre 4</span>
+                                </label>
+                                <button type="button" onclick="openEditBellModal(3)" style="background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 5px; color: #9f7aea;" title="Editar nombre y duración">✏️</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success">Guardar Visibilidad de Timbres</button>
+                </form>
+            </div>
+
+            <!-- Visibilidad de Días -->
+            <div class="section">
+                <h2>Visibilidad de Días de la Semana</h2>
+                <p style="color: #718096; margin-bottom: 20px;">Selecciona qué días deseas mostrar al crear horarios. Los días ocultos no aparecerán como opción al programar.</p>
+
+                <form id="dayVisibilityForm" onsubmit="saveDayVisibility(event)">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
                         <div style="background: #f7fafc; padding: 15px; border-radius: 10px; border: 2px solid #e2e8f0;">
                             <label style="display: flex; align-items: center; cursor: pointer;">
-                                <input type="checkbox" id="bell0Visible" checked style="width: 20px; height: 20px; margin-right: 10px;">
-                                <span style="font-weight: 600; color: #4a5568;" id="visLabel0">Timbre 1</span>
+                                <input type="checkbox" id="day0Visible" checked style="width: 20px; height: 20px; margin-right: 10px;">
+                                <span style="font-weight: 600; color: #4a5568;">Lunes</span>
                             </label>
                         </div>
                         <div style="background: #f7fafc; padding: 15px; border-radius: 10px; border: 2px solid #e2e8f0;">
                             <label style="display: flex; align-items: center; cursor: pointer;">
-                                <input type="checkbox" id="bell1Visible" checked style="width: 20px; height: 20px; margin-right: 10px;">
-                                <span style="font-weight: 600; color: #4a5568;" id="visLabel1">Timbre 2</span>
+                                <input type="checkbox" id="day1Visible" checked style="width: 20px; height: 20px; margin-right: 10px;">
+                                <span style="font-weight: 600; color: #4a5568;">Martes</span>
                             </label>
                         </div>
                         <div style="background: #f7fafc; padding: 15px; border-radius: 10px; border: 2px solid #e2e8f0;">
                             <label style="display: flex; align-items: center; cursor: pointer;">
-                                <input type="checkbox" id="bell2Visible" checked style="width: 20px; height: 20px; margin-right: 10px;">
-                                <span style="font-weight: 600; color: #4a5568;" id="visLabel2">Timbre 3</span>
+                                <input type="checkbox" id="day2Visible" checked style="width: 20px; height: 20px; margin-right: 10px;">
+                                <span style="font-weight: 600; color: #4a5568;">Miércoles</span>
                             </label>
                         </div>
                         <div style="background: #f7fafc; padding: 15px; border-radius: 10px; border: 2px solid #e2e8f0;">
                             <label style="display: flex; align-items: center; cursor: pointer;">
-                                <input type="checkbox" id="bell3Visible" checked style="width: 20px; height: 20px; margin-right: 10px;">
-                                <span style="font-weight: 600; color: #4a5568;" id="visLabel3">Timbre 4</span>
+                                <input type="checkbox" id="day3Visible" checked style="width: 20px; height: 20px; margin-right: 10px;">
+                                <span style="font-weight: 600; color: #4a5568;">Jueves</span>
+                            </label>
+                        </div>
+                        <div style="background: #f7fafc; padding: 15px; border-radius: 10px; border: 2px solid #e2e8f0;">
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="checkbox" id="day4Visible" checked style="width: 20px; height: 20px; margin-right: 10px;">
+                                <span style="font-weight: 600; color: #4a5568;">Viernes</span>
+                            </label>
+                        </div>
+                        <div style="background: #f7fafc; padding: 15px; border-radius: 10px; border: 2px solid #e2e8f0;">
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="checkbox" id="day5Visible" style="width: 20px; height: 20px; margin-right: 10px;">
+                                <span style="font-weight: 600; color: #4a5568;">Sábado</span>
+                            </label>
+                        </div>
+                        <div style="background: #f7fafc; padding: 15px; border-radius: 10px; border: 2px solid #e2e8f0;">
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="checkbox" id="day6Visible" checked style="width: 20px; height: 20px; margin-right: 10px;">
+                                <span style="font-weight: 600; color: #4a5568;">Domingo</span>
                             </label>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-success">Guardar Visibilidad</button>
+                    <button type="submit" class="btn btn-success">Guardar Visibilidad de Días</button>
                 </form>
             </div>
         </div>
@@ -597,6 +663,32 @@
                 <div class="controls">
                     <button type="submit" class="btn btn-success">Guardar</button>
                     <button type="button" class="btn" onclick="closeTimeModal()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para editar timbre -->
+    <div class="modal" id="editBellModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Editar Timbre <span id="editBellNumber"></span></h3>
+                <button class="close-btn" onclick="closeEditBellModal()">✕</button>
+            </div>
+            <form id="editBellForm" onsubmit="saveEditBell(event)">
+                <input type="hidden" id="editBellIndex">
+                <div class="form-group">
+                    <label>Nombre del Timbre</label>
+                    <input type="text" id="editBellName" maxlength="30" placeholder="Ej: Entrada" required>
+                </div>
+                <div class="form-group">
+                    <label>Duración (segundos)</label>
+                    <input type="number" id="editBellDuration" min="1" max="60" value="3" required>
+                    <small style="color: #718096; display: block; margin-top: 5px;">Tiempo que el relé permanecerá activo (1-60 segundos)</small>
+                </div>
+                <div class="controls">
+                    <button type="submit" class="btn btn-success">Guardar</button>
+                    <button type="button" class="btn" onclick="closeEditBellModal()">Cancelar</button>
                 </div>
             </form>
         </div>
@@ -653,6 +745,7 @@
             loadMQTTConfig();
             loadNormalUserInfo();
             loadBellVisibility();
+            loadDayVisibility();
             updateCurrentTime();
             updateBellStates(); // Actualizar estado de timbres inmediatamente
             setInterval(updateCurrentTime, 1000);
@@ -1145,7 +1238,32 @@
                     }
                 }
             } catch (error) {
-                console.error('Error cargando visibilidad:', error);
+                console.error('Error cargando visibilidad de timbres:', error);
+            }
+        }
+
+        // Cargar visibilidad de días
+        async function loadDayVisibility() {
+            try {
+                const response = await fetch('/api/day-visibility', {
+                    headers: {
+                        'Authorization': getAuthToken()
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const visibility = data.visibility || [true, true, true, true, true, false, true]; // L-V + D visible, S oculto
+
+                    // Actualizar checkboxes
+                    for (let i = 0; i < 7; i++) {
+                        const checkbox = document.getElementById(`day${i}Visible`);
+                        if (checkbox) {
+                            checkbox.checked = visibility[i];
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error cargando visibilidad de días:', error);
             }
         }
 
@@ -1175,12 +1293,130 @@
                 });
 
                 if (response.ok) {
-                    showNotification('Visibilidad guardada correctamente', 'success');
+                    showNotification('Visibilidad de timbres guardada correctamente', 'success');
                 } else {
-                    showNotification('Error guardando visibilidad', 'error');
+                    showNotification('Error guardando visibilidad de timbres', 'error');
                 }
             } catch (error) {
-                showNotification('Error guardando visibilidad', 'error');
+                showNotification('Error guardando visibilidad de timbres', 'error');
+                console.error(error);
+            }
+        }
+
+        // Abrir modal para editar timbre
+        function openEditBellModal(bellIndex) {
+            document.getElementById('editBellIndex').value = bellIndex;
+            document.getElementById('editBellNumber').textContent = bellIndex + 1;
+            document.getElementById('editBellName').value = bellNames[bellIndex];
+
+            // Cargar duración actual desde el servidor
+            fetch('/api/bell-durations', {
+                headers: { 'Authorization': getAuthToken() }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const durations = data.durations || [3000, 3000, 3000, 3000];
+                document.getElementById('editBellDuration').value = durations[bellIndex] / 1000; // Convertir de ms a segundos
+            })
+            .catch(error => {
+                console.error('Error cargando duración:', error);
+                document.getElementById('editBellDuration').value = 3; // Default 3 segundos
+            });
+
+            document.getElementById('editBellModal').classList.add('active');
+        }
+
+        // Cerrar modal de edición de timbre
+        function closeEditBellModal() {
+            document.getElementById('editBellModal').classList.remove('active');
+        }
+
+        // Guardar cambios del timbre
+        async function saveEditBell(event) {
+            event.preventDefault();
+
+            const bellIndex = parseInt(document.getElementById('editBellIndex').value);
+            const newName = document.getElementById('editBellName').value;
+            const newDuration = parseInt(document.getElementById('editBellDuration').value);
+
+            try {
+                // Guardar nombre
+                const currentNames = [...bellNames];
+                currentNames[bellIndex] = newName;
+
+                const nameResponse = await fetch('/api/bell-names', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthToken()
+                    },
+                    body: JSON.stringify({ names: currentNames })
+                });
+
+                // Cargar duraciones actuales
+                const durationsResponse = await fetch('/api/bell-durations', {
+                    headers: { 'Authorization': getAuthToken() }
+                });
+                const durationsData = await durationsResponse.json();
+                const currentDurations = durationsData.durations || [3000, 3000, 3000, 3000];
+
+                // Actualizar la duración del timbre editado
+                currentDurations[bellIndex] = newDuration * 1000; // Convertir de segundos a ms
+
+                const durationResponse = await fetch('/api/bell-durations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthToken()
+                    },
+                    body: JSON.stringify({ durations: currentDurations })
+                });
+
+                if (nameResponse.ok && durationResponse.ok) {
+                    bellNames[bellIndex] = newName;
+                    document.getElementById(`visLabel${bellIndex}`).textContent = newName;
+                    showNotification(`Timbre ${bellIndex + 1} actualizado correctamente`, 'success');
+                    closeEditBellModal();
+                } else {
+                    showNotification('Error guardando configuración del timbre', 'error');
+                }
+            } catch (error) {
+                showNotification('Error guardando configuración del timbre', 'error');
+                console.error(error);
+            }
+        }
+
+        async function saveDayVisibility(event) {
+            event.preventDefault();
+
+            const visibility = [];
+            for (let i = 0; i < 7; i++) {
+                visibility.push(document.getElementById(`day${i}Visible`).checked);
+            }
+
+            // Validar que al menos un día esté visible
+            if (!visibility.some(v => v)) {
+                showNotification('Debes mostrar al menos un día', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/day-visibility', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthToken()
+                    },
+                    body: JSON.stringify({ visibility: visibility })
+                });
+
+                if (response.ok) {
+                    showNotification('Visibilidad de días guardada correctamente', 'success');
+                } else {
+                    showNotification('Error guardando visibilidad de días', 'error');
+                }
+            } catch (error) {
+                showNotification('Error guardando visibilidad de días', 'error');
                 console.error(error);
             }
         }

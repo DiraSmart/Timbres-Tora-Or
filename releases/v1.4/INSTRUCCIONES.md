@@ -42,6 +42,7 @@ Esta versión mantiene todas las características MQTT de v1.3 con las mejoras m
 
 ## Archivos incluidos
 
+- `tora-or-combined-v1.4.bin` - **NUEVO**: Archivo combinado con todo (firmware + filesystem + bootloader + particiones) - La forma más fácil de flashear
 - `tora-or-firmware-v1.4.bin` - Firmware principal del sistema
 - `tora-or-filesystem-v1.4.bin` - Sistema de archivos con páginas web
 - `bootloader.bin` - Bootloader del ESP32
@@ -74,14 +75,40 @@ Si ya tienes una versión anterior instalada:
    - `0x10000`: `tora-or-firmware-v1.4.bin`
    - `0x290000`: `tora-or-filesystem-v1.4.bin`
 
-### Opción 3: Línea de comandos (instalación completa)
+### Opción 3: Línea de comandos - Archivo combinado (MÁS RÁPIDO) ⚡
+
+**Esta es la forma más rápida de flashear todo el sistema de una vez.**
 
 #### Requisitos
 - ESP32 Dev Module
 - Cable USB
 - Python con esptool instalado
 
-#### Instalación completa
+#### Instalación con archivo combinado
+
+1. Conecta el ESP32 al puerto USB
+
+2. Pon el ESP32 en modo de descarga:
+   - Mantén presionado el botón BOOT
+   - Conecta el USB (o presiona RESET si ya está conectado)
+   - Mantén BOOT por 3-5 segundos más
+   - Suelta BOOT
+
+3. Ejecuta el siguiente comando (ajusta COM4 a tu puerto):
+
+```bash
+python -m esptool --chip esp32 --port COM4 --baud 921600 write_flash -z 0x0 tora-or-combined-v1.4.bin
+```
+
+**Ventajas:**
+- ✅ Un solo comando
+- ✅ Un solo archivo
+- ✅ Flasheo más rápido
+- ✅ Menos probabilidad de error
+
+### Opción 4: Línea de comandos - Archivos separados (instalación completa)
+
+Si prefieres flashear los archivos por separado:
 
 1. Conecta el ESP32 al puerto USB
 
@@ -97,7 +124,7 @@ Si ya tienes una versión anterior instalada:
 python -m esptool --chip esp32 --port COM4 --baud 921600 write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect 0x1000 bootloader.bin 0x8000 partitions.bin 0x10000 tora-or-firmware-v1.4.bin 0x290000 tora-or-filesystem-v1.4.bin
 ```
 
-### Opción 4: Solo actualización de firmware y filesystem
+### Opción 5: Solo actualización de firmware y filesystem
 
 Si solo quieres actualizar el firmware y filesystem sin tocar bootloader ni particiones:
 

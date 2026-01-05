@@ -28,7 +28,13 @@
       "Bash(copy \".pio\\\\build\\\\esp32dev\\\\firmware.bin\" \"releases\\\\v1.3\\\\tora-or-firmware-v1.3.bin\")",
       "Bash(pio device list:*)",
       "Bash(timeout 30 pio device monitor:*)",
-      "Bash(timeout 40 pio device monitor:*)"
+      "Bash(timeout 40 pio device monitor:*)",
+      "Bash(copy \".pio\\\\build\\\\esp32dev\\\\firmware.bin\" \"releases\\\\v1.4\\\\tora-or-firmware-v1.4.bin\")",
+      "Bash(gh:*)",
+      "Bash(python:*)",
+      "Bash(copy \".pio\\\\build\\\\esp32dev\\\\littlefs.bin\" \"releases\\\\v1.4\\\\tora-or-filesystem-v1.4.bin\")",
+      "Bash(timeout:*)",
+      "Bash(copy \".pio\\\\build\\\\esp32dev\\\\firmware.bin\" \"releases\\\\v1.5\\\\tora-or-firmware-v1.5.bin\")"
     ]
   }
 }

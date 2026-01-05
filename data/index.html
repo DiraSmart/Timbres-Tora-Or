@@ -187,13 +187,6 @@
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.1);
         }
 
-        .schedule-info {
-            display: flex;
-            gap: 30px;
-            flex-wrap: wrap;
-            flex: 1;
-        }
-
         .info-group {
             display: flex;
             flex-direction: column;
@@ -209,6 +202,33 @@
             font-size: 1.2em;
             color: #2d3748;
             font-weight: 600;
+        }
+
+        /* Estilo para nombre de horario con ancho fijo */
+        .schedule-name-fixed {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 1.2em;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        /* Reorganizar layout de horarios para alineación vertical */
+        .schedule-info {
+            display: grid;
+            grid-template-columns: 200px 100px 1fr;
+            gap: 20px;
+            align-items: center;
+            flex: 1;
+        }
+
+        @media (max-width: 768px) {
+            .schedule-info {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
         }
 
         .days-display {
@@ -335,6 +355,59 @@
             font-size: 0.85em;
             color: #718096;
             font-weight: 600;
+        }
+
+
+        .day-section {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+
+        .day-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #cbd5e0;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .day-header h2 {
+            color: #667eea;
+            font-size: 1.8em;
+            margin: 0;
+        }
+
+        .day-header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .day-count {
+            background: #667eea;
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .bell-name-tag {
+            background: #764ba2;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-right: 10px;
+            display: inline-block;
         }
 
         .modal {
@@ -581,108 +654,9 @@
                 </div>
             </div>
 
-            <!-- Horarios Timbre 1 -->
-            <div class="bell-section" id="bellSection0">
-                <div class="bell-header">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <h2 id="bell0Name">Timbre 1</h2>
-                        <button class="btn btn-icon" onclick="showEditBellModal(0)" title="Editar nombre y duración">✏️</button>
-                    </div>
-                    <div class="bell-header-right">
-                        <span class="bell-count" id="bell0Count">0 horarios</span>
-                        <div class="master-toggle">
-                            <label class="switch">
-                                <input type="checkbox" id="bell0Master" checked onchange="toggleBellMaster(0)">
-                                <span class="slider"></span>
-                            </label>
-                            <label for="bell0Master">Todos</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="schedule-list" id="bell0Schedules">
-                    <div class="empty-state">
-                        <div class="empty-state-icon">🔔</div>
-                        <p>No hay horarios configurados para este timbre</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Horarios Timbre 2 -->
-            <div class="bell-section" id="bellSection1">
-                <div class="bell-header">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <h2 id="bell1Name">Timbre 2</h2>
-                        <button class="btn btn-icon" onclick="showEditBellModal(1)" title="Editar nombre y duración">✏️</button>
-                    </div>
-                    <div class="bell-header-right">
-                        <span class="bell-count" id="bell1Count">0 horarios</span>
-                        <div class="master-toggle">
-                            <label class="switch">
-                                <input type="checkbox" id="bell1Master" checked onchange="toggleBellMaster(1)">
-                                <span class="slider"></span>
-                            </label>
-                            <label for="bell1Master">Todos</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="schedule-list" id="bell1Schedules">
-                    <div class="empty-state">
-                        <div class="empty-state-icon">🔔</div>
-                        <p>No hay horarios configurados para este timbre</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Horarios Timbre 3 -->
-            <div class="bell-section" id="bellSection2">
-                <div class="bell-header">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <h2 id="bell2Name">Timbre 3</h2>
-                        <button class="btn btn-icon" onclick="showEditBellModal(2)" title="Editar nombre y duración">✏️</button>
-                    </div>
-                    <div class="bell-header-right">
-                        <span class="bell-count" id="bell2Count">0 horarios</span>
-                        <div class="master-toggle">
-                            <label class="switch">
-                                <input type="checkbox" id="bell2Master" checked onchange="toggleBellMaster(2)">
-                                <span class="slider"></span>
-                            </label>
-                            <label for="bell2Master">Todos</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="schedule-list" id="bell2Schedules">
-                    <div class="empty-state">
-                        <div class="empty-state-icon">🔔</div>
-                        <p>No hay horarios configurados para este timbre</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Horarios Timbre 4 -->
-            <div class="bell-section" id="bellSection3">
-                <div class="bell-header">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <h2 id="bell3Name">Timbre 4</h2>
-                        <button class="btn btn-icon" onclick="showEditBellModal(3)" title="Editar nombre y duración">✏️</button>
-                    </div>
-                    <div class="bell-header-right">
-                        <span class="bell-count" id="bell3Count">0 horarios</span>
-                        <div class="master-toggle">
-                            <label class="switch">
-                                <input type="checkbox" id="bell3Master" checked onchange="toggleBellMaster(3)">
-                                <span class="slider"></span>
-                            </label>
-                            <label for="bell3Master">Todos</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="schedule-list" id="bell3Schedules">
-                    <div class="empty-state">
-                        <div class="empty-state-icon">🔔</div>
-                        <p>No hay horarios configurados para este timbre</p>
-                    </div>
-                </div>
+            <!-- Vista por Días -->
+            <div id="schedulesContainer">
+                <!-- Los días se renderizan dinámicamente aquí -->
             </div>
 
             <!-- Logo DiraSmart al final -->
@@ -773,6 +747,7 @@
         let schedules = [];
         let bellNames = ['Timbre 1', 'Timbre 2', 'Timbre 3', 'Timbre 4'];
         let bellVisibility = [true, true, true, true];
+        let dayVisibility = [true, true, true, true, true, false, true]; // L-D, Sábado oculto por defecto
         let bellDurations = [3000, 3000, 3000, 3000];
         let editingBellIndex = -1;
         let editingScheduleId = -1;
@@ -825,6 +800,7 @@
             await loadBellNames();
             await loadBellDurations();
             await loadBellVisibility();
+            await loadDayVisibility();
             await loadSchedules();
             await loadSchedulesSwitches();
             updateCurrentTime();
@@ -911,13 +887,16 @@
 
         // Actualizar nombres en la interfaz
         function updateBellNames() {
+            // Actualizar botones del modal
             for (let i = 0; i < 4; i++) {
-                document.getElementById(`bell${i}Name`).textContent = bellNames[i];
-                // Actualizar botones del modal
                 const bellBtn = document.getElementById(`bellBtn${i}`);
                 if (bellBtn) {
                     bellBtn.textContent = bellNames[i];
                 }
+            }
+            // Re-renderizar para actualizar los nombres de timbres en los horarios
+            if (schedules.length > 0) {
+                renderSchedules();
             }
         }
 
@@ -1022,20 +1001,44 @@
             }
         }
 
-        // Aplicar visibilidad de timbres (ocultar/mostrar secciones)
+        // Aplicar visibilidad de timbres (ocultar/mostrar botones en el modal)
         function applyBellVisibility() {
             for (let i = 0; i < 4; i++) {
-                const section = document.getElementById(`bellSection${i}`);
-                if (section) {
-                    section.style.display = bellVisibility[i] ? 'block' : 'none';
-                }
-
-                // También ocultar/mostrar botones de timbre en el modal
+                // Ocultar/mostrar botones de timbre en el modal
                 const bellBtn = document.getElementById(`bellBtn${i}`);
                 if (bellBtn) {
                     bellBtn.style.display = bellVisibility[i] ? 'inline-block' : 'none';
                 }
             }
+        }
+
+        // Cargar visibilidad de días
+        async function loadDayVisibility() {
+            try {
+                const response = await fetch('/api/day-visibility', {
+                    headers: {
+                        'Authorization': getAuthToken()
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    dayVisibility = data.visibility || [true, true, true, true, true, false, true];
+                    applyDayVisibility();
+                }
+            } catch (error) {
+                console.error('Error cargando visibilidad de días:', error);
+            }
+        }
+
+        // Aplicar visibilidad de días (ocultar/mostrar botones de días en el modal)
+        function applyDayVisibility() {
+            document.querySelectorAll('.day-btn').forEach((btn, i) => {
+                if (dayVisibility[i]) {
+                    btn.style.display = 'inline-block';
+                } else {
+                    btn.style.display = 'none';
+                }
+            });
         }
 
         // Actualizar hora actual
@@ -1074,110 +1077,164 @@
             }
         }
 
-        // Renderizar horarios por timbre
+        // Renderizar horarios por día
         function renderSchedules() {
-            const dayNames = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+            const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
-            // Agrupar horarios por timbre
-            const schedulesByBell = [[], [], [], []];
+            const container = document.getElementById('schedulesContainer');
+
+            // Agregar IDs a todos los horarios
             schedules.forEach((schedule, index) => {
                 schedule.id = index;
-                if (schedule.bell >= 0 && schedule.bell < 4) {
-                    schedulesByBell[schedule.bell].push(schedule);
+            });
+
+            // Agrupar horarios por día (0=Lunes, 6=Domingo)
+            const schedulesByDay = [[], [], [], [], [], [], []];
+
+            schedules.forEach(schedule => {
+                for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+                    if (schedule.days[dayIndex]) {
+                        schedulesByDay[dayIndex].push(schedule);
+                    }
                 }
             });
 
-            // Ordenar horarios por hora dentro de cada timbre
-            schedulesByBell.forEach(bellSchedules => {
-                bellSchedules.sort((a, b) => {
-                    // Primero ordenar por hora
-                    if (a.hour !== b.hour) {
-                        return a.hour - b.hour;
-                    }
-                    // Si la hora es igual, ordenar por minuto
-                    return a.minute - b.minute;
-                });
-            });
-
-            // Renderizar cada timbre
-            for (let bellIndex = 0; bellIndex < 4; bellIndex++) {
-                const container = document.getElementById(`bell${bellIndex}Schedules`);
-                const countBadge = document.getElementById(`bell${bellIndex}Count`);
-                const bellSchedules = schedulesByBell[bellIndex];
-
-                countBadge.textContent = `${bellSchedules.length} horario${bellSchedules.length !== 1 ? 's' : ''}`;
-
-                // El toggle maestro ahora refleja bellSchedulesEnabled, no se actualiza aquí
-                // Se actualiza desde loadSchedulesSwitches()
-
-                if (bellSchedules.length === 0) {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-state-icon">🔔</div>
-                            <p>No hay horarios configurados para este timbre</p>
-                        </div>
-                    `;
+            // Renderizar cada día
+            let html = '';
+            for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+                // Si el día no está visible, no lo mostramos
+                if (!dayVisibility[dayIndex]) {
                     continue;
                 }
 
-                // Obtener estado del switch de horarios para este timbre
-                const bellSchedulesSwitch = document.getElementById(`bell${bellIndex}Master`);
-                const bellSchedulesEnabled = bellSchedulesSwitch ? bellSchedulesSwitch.checked : true;
+                const daySchedules = schedulesByDay[dayIndex];
+                const dayName = dayNames[dayIndex];
 
-                container.innerHTML = bellSchedules.map(schedule => {
-                    const timeStr = `${String(schedule.hour).padStart(2, '0')}:${String(schedule.minute).padStart(2, '0')}`;
+                // Obtener estado del switch de este día
+                const dayToggle = document.getElementById(`day${dayIndex}Master`);
+                const dayEnabled = dayToggle ? dayToggle.checked : true;
 
-                    const daysHTML = dayNames.map((day, i) =>
-                        `<span class="day-badge ${schedule.days[i] ? 'active' : ''}">${day}</span>`
-                    ).join('');
+                // Consolidar horarios por hora + nombre
+                const consolidatedSchedules = {};
+                daySchedules.forEach(schedule => {
+                    const timeKey = `${String(schedule.hour).padStart(2, '0')}:${String(schedule.minute).padStart(2, '0')}`;
+                    const nameKey = schedule.name || '';
+                    const combinedKey = `${timeKey}|${nameKey}`;
 
-                    const scheduleName = schedule.name || '';
-                    const nameHTML = scheduleName ? `
-                        <div class="info-group">
-                            <span class="info-label">Nombre</span>
-                            <span class="info-value" style="color: #667eea;">${scheduleName}</span>
+                    if (!consolidatedSchedules[combinedKey]) {
+                        consolidatedSchedules[combinedKey] = {
+                            hour: schedule.hour,
+                            minute: schedule.minute,
+                            name: schedule.name,
+                            bells: [],
+                            scheduleIds: [],
+                            enabled: schedule.enabled
+                        };
+                    }
+                    consolidatedSchedules[combinedKey].bells.push(schedule.bell);
+                    consolidatedSchedules[combinedKey].scheduleIds.push(schedule.id);
+                    // Si al menos uno está habilitado, consideramos el grupo habilitado
+                    consolidatedSchedules[combinedKey].enabled = consolidatedSchedules[combinedKey].enabled || schedule.enabled;
+                });
+
+                // Convertir a array y ordenar
+                const consolidatedArray = Object.values(consolidatedSchedules).sort((a, b) => {
+                    if (a.hour !== b.hour) return a.hour - b.hour;
+                    if (a.minute !== b.minute) return a.minute - b.minute;
+                    return 0;
+                });
+
+                html += `
+                    <div class="day-section" id="daySection${dayIndex}">
+                        <div class="day-header">
+                            <h2>${dayName}</h2>
+                            <div class="day-header-right">
+                                <span class="day-count">${consolidatedArray.length} horario${consolidatedArray.length !== 1 ? 's' : ''}</span>
+                                <div class="master-toggle">
+                                    <label class="switch">
+                                        <input type="checkbox" id="day${dayIndex}Master" ${dayEnabled ? 'checked' : ''} onchange="toggleDayMaster(${dayIndex})">
+                                        <span class="slider"></span>
+                                    </label>
+                                    <label for="day${dayIndex}Master">Activar Día</label>
+                                </div>
+                            </div>
                         </div>
-                    ` : '';
+                        <div class="schedule-list">
+                `;
 
-                    // Si bellSchedulesEnabled está en false, mostrar todo deshabilitado visualmente
-                    const isVisuallyDisabled = !bellSchedulesEnabled;
-                    const opacity = isVisuallyDisabled ? '0.4' : (!schedule.enabled ? '0.5' : '1');
-                    const statusText = isVisuallyDisabled ? 'Horarios desactivados' : (schedule.enabled ? 'Activo' : 'Inactivo');
-                    const statusColor = isVisuallyDisabled ? '#e53e3e' : (schedule.enabled ? '#48bb78' : '#a0aec0');
-
-                    return `
-                        <div class="schedule-item" style="opacity: ${opacity}; ${isVisuallyDisabled ? 'filter: grayscale(50%);' : ''}">
-                            <div class="schedule-info">
-                                <div class="info-group">
-                                    <span class="toggle-label" style="display: block; text-align: center; margin-bottom: 8px; font-weight: 600; color: ${statusColor};">${statusText}</span>
-                                    <div class="schedule-toggle" style="justify-content: center;">
-                                        <label class="switch">
-                                            <input type="checkbox" ${schedule.enabled ? 'checked' : ''} onchange="toggleSchedule(${schedule.id})" ${isVisuallyDisabled ? 'disabled' : ''}>
-                                            <span class="slider"></span>
-                                        </label>
-                                    </div>
-                                </div>
-                                ${nameHTML}
-                                <div class="info-group">
-                                    <span class="info-label">Hora</span>
-                                    <span class="info-value">${timeStr}</span>
-                                </div>
-                                <div class="info-group">
-                                    <span class="info-label">Días</span>
-                                    <div class="days-display">${daysHTML}</div>
-                                </div>
-                            </div>
-                            <div class="schedule-actions">
-                                <button class="btn btn-small" onclick="editSchedule(${schedule.id})" ${isVisuallyDisabled ? 'disabled' : ''}>Editar</button>
-                                <button class="btn btn-small btn-danger" onclick="deleteSchedule(${schedule.id})" ${isVisuallyDisabled ? 'disabled' : ''}>Eliminar</button>
-                            </div>
+                if (consolidatedArray.length === 0) {
+                    html += `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📅</div>
+                            <p>No hay horarios configurados para este día</p>
                         </div>
                     `;
-                }).join('');
+                } else {
+                    consolidatedArray.forEach(consolidated => {
+                        const timeStr = `${String(consolidated.hour).padStart(2, '0')}:${String(consolidated.minute).padStart(2, '0')}`;
+                        const scheduleName = consolidated.name || '';
+
+                        // Crear badges de colores para los timbres
+                        const bellColors = ['#667eea', '#48bb78', '#ed8936', '#9f7aea']; // Morado, Verde, Naranja, Púrpura
+                        const bellBadges = consolidated.bells
+                            .sort((a, b) => a - b)
+                            .map(bellIndex => {
+                                const bellName = bellNames[bellIndex] || `Timbre ${bellIndex + 1}`;
+                                const color = bellColors[bellIndex % bellColors.length];
+                                return `<span class="bell-name-tag" style="background: ${color}; margin-right: 5px;">${bellName}</span>`;
+                            })
+                            .join('');
+
+                        const nameHTML = scheduleName ? `
+                            <div class="info-group">
+                                <span class="info-label">Nombre</span>
+                                <span class="schedule-name-fixed" title="${scheduleName}">${scheduleName}</span>
+                            </div>
+                        ` : `
+                            <div class="info-group">
+                                <span class="info-label">Nombre</span>
+                                <span class="schedule-name-fixed" style="color: #999;">Sin nombre</span>
+                            </div>
+                        `;
+
+                        // Deshabilitar visualmente si el día está desactivado
+                        const isVisuallyDisabled = !dayEnabled;
+                        const opacity = isVisuallyDisabled ? '0.4' : '1';
+
+                        // Para editar, usar el primer ID del grupo
+                        const firstScheduleId = consolidated.scheduleIds[0];
+
+                        html += `
+                            <div class="schedule-item" style="opacity: ${opacity}; ${isVisuallyDisabled ? 'filter: grayscale(50%);' : ''}">
+                                <div class="schedule-info">
+                                    ${nameHTML}
+                                    <div class="info-group">
+                                        <span class="info-label">Hora</span>
+                                        <span class="info-value">${timeStr}</span>
+                                    </div>
+                                    <div class="info-group">
+                                        <span class="info-label">Timbres</span>
+                                        <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                                            ${bellBadges}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="schedule-actions">
+                                    <button class="btn btn-small" onclick="editSchedule(${firstScheduleId})" ${isVisuallyDisabled ? 'disabled' : ''}>Editar</button>
+                                    <button class="btn btn-small btn-danger" onclick="deleteScheduleGroup([${consolidated.scheduleIds.join(',')}])" ${isVisuallyDisabled ? 'disabled' : ''}>Eliminar</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                html += `
+                        </div>
+                    </div>
+                `;
             }
 
-            // Aplicar visibilidad de timbres después de renderizar
-            applyBellVisibility();
+            container.innerHTML = html;
         }
 
         // Activar/desactivar un horario individual
@@ -1186,12 +1243,65 @@
             saveAllSchedules();
         }
 
-        // Activar/desactivar todos los horarios de un timbre
-        async function toggleBellMaster(bellIndex) {
-            const masterToggle = document.getElementById(`bell${bellIndex}Master`);
+        // Activar/desactivar un grupo de horarios (mismo horario, múltiples timbres)
+        function toggleScheduleGroup(scheduleIds) {
+            // Verificar el estado actual del primer horario del grupo
+            const currentState = schedules[scheduleIds[0]].enabled;
+            const newState = !currentState;
+
+            // Aplicar el nuevo estado a todos los horarios del grupo
+            scheduleIds.forEach(id => {
+                schedules[id].enabled = newState;
+            });
+
+            saveAllSchedules();
+        }
+
+        // Eliminar un grupo de horarios
+        async function deleteScheduleGroup(scheduleIds) {
+            if (!confirm(`¿Eliminar este horario? Se eliminarán ${scheduleIds.length} timbre${scheduleIds.length > 1 ? 's' : ''}.`)) {
+                return;
+            }
+
+            try {
+                // Ordenar de mayor a menor para eliminar desde el final
+                const sortedIds = [...scheduleIds].sort((a, b) => b - a);
+
+                // Eliminar cada horario del grupo
+                for (const id of sortedIds) {
+                    await fetch(`/api/schedules/${id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': getAuthToken()
+                        }
+                    });
+                }
+
+                showNotification('Horario eliminado correctamente', 'success');
+                await loadSchedules();
+            } catch (error) {
+                showNotification('Error al eliminar horario', 'error');
+                console.error(error);
+            }
+        }
+
+        // Activar/desactivar todos los horarios de un día
+        async function toggleDayMaster(dayIndex) {
+            const masterToggle = document.getElementById(`day${dayIndex}Master`);
             const isEnabled = masterToggle.checked;
 
             try {
+                // Obtener el estado actual de todos los días
+                const daysArray = [];
+                for (let i = 0; i < 7; i++) {
+                    if (i === dayIndex) {
+                        daysArray.push(isEnabled);
+                    } else {
+                        const otherToggle = document.getElementById(`day${i}Master`);
+                        daysArray.push(otherToggle ? otherToggle.checked : true);
+                    }
+                }
+
                 const response = await fetch('/api/schedules-switches', {
                     method: 'POST',
                     headers: {
@@ -1199,35 +1309,25 @@
                         'Authorization': getAuthToken()
                     },
                     body: JSON.stringify({
-                        bells: [
-                            bellIndex === 0 ? isEnabled : undefined,
-                            bellIndex === 1 ? isEnabled : undefined,
-                            bellIndex === 2 ? isEnabled : undefined,
-                            bellIndex === 3 ? isEnabled : undefined
-                        ].map((val, idx) => {
-                            if (idx === bellIndex) return isEnabled;
-                            // Mantener valores actuales de los otros timbres
-                            const otherToggle = document.getElementById(`bell${idx}Master`);
-                            return otherToggle ? otherToggle.checked : true;
-                        })
+                        days: daysArray
                     })
                 });
 
                 if (response.ok) {
-                    const bellNames = ['Timbre 1', 'Timbre 2', 'Timbre 3', 'Timbre 4'];
+                    const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
                     showNotification(
-                        isEnabled ? `Horarios de ${bellNames[bellIndex]} activados` : `Horarios de ${bellNames[bellIndex]} desactivados`,
+                        isEnabled ? `Horarios de ${dayNames[dayIndex]} activados` : `Horarios de ${dayNames[dayIndex]} desactivados`,
                         'success'
                     );
                     // Re-renderizar horarios para actualizar el estado visual
                     renderSchedules();
                 } else {
-                    showNotification('Error al cambiar estado de horarios del timbre', 'error');
+                    showNotification('Error al cambiar estado de horarios del día', 'error');
                     // Revertir el toggle si hubo error
                     masterToggle.checked = !isEnabled;
                 }
             } catch (error) {
-                showNotification('Error al cambiar estado de horarios del timbre', 'error');
+                showNotification('Error al cambiar estado de horarios del día', 'error');
                 // Revertir el toggle si hubo error
                 masterToggle.checked = !isEnabled;
             }
@@ -1239,7 +1339,7 @@
             const isEnabled = globalToggle.checked;
 
             try {
-                // Enviar tanto el estado global como todos los switches individuales
+                // Enviar tanto el estado global como todos los días
                 const response = await fetch('/api/schedules-switches', {
                     method: 'POST',
                     headers: {
@@ -1248,7 +1348,7 @@
                     },
                     body: JSON.stringify({
                         global: isEnabled,
-                        bells: [isEnabled, isEnabled, isEnabled, isEnabled]
+                        days: [isEnabled, isEnabled, isEnabled, isEnabled, isEnabled, isEnabled, isEnabled]
                     })
                 });
 
@@ -1258,11 +1358,11 @@
                         'success'
                     );
 
-                    // Actualizar todos los toggles individuales visualmente
-                    for (let i = 0; i < 4; i++) {
-                        const bellToggle = document.getElementById(`bell${i}Master`);
-                        if (bellToggle) {
-                            bellToggle.checked = isEnabled;
+                    // Actualizar todos los toggles individuales de días visualmente
+                    for (let i = 0; i < 7; i++) {
+                        const dayToggle = document.getElementById(`day${i}Master`);
+                        if (dayToggle) {
+                            dayToggle.checked = isEnabled;
                         }
                     }
 
@@ -1292,22 +1392,45 @@
             document.getElementById('scheduleModal').classList.add('active');
         }
 
-        // Editar horario
+        // Editar horario (ahora con soporte para grupos)
         function editSchedule(id) {
             editingScheduleId = id;
             const schedule = schedules[id];
 
             document.getElementById('modalTitle').textContent = 'Editar Horario';
-            document.getElementById('bellsLabel').textContent = 'Timbre';
-            document.getElementById('bellsHint').style.display = 'none';
 
             // Limpiar selección de timbres
             document.querySelectorAll('.bell-btn').forEach(btn => btn.classList.remove('active'));
 
-            // Seleccionar solo el timbre del horario
-            const bellBtn = document.querySelector(`.bell-btn[data-bell="${schedule.bell}"]`);
-            if (bellBtn) {
-                bellBtn.classList.add('active');
+            // Buscar todos los horarios con la misma hora, minuto, nombre y días
+            const relatedSchedules = schedules.filter(s =>
+                s.hour === schedule.hour &&
+                s.minute === schedule.minute &&
+                s.name === schedule.name &&
+                JSON.stringify(s.days) === JSON.stringify(schedule.days)
+            );
+
+            // Si hay múltiples horarios (grupo), mostrar todos los timbres seleccionados
+            if (relatedSchedules.length > 1) {
+                document.getElementById('bellsLabel').textContent = 'Timbres (selecciona uno o varios)';
+                document.getElementById('bellsHint').style.display = 'block';
+
+                // Seleccionar todos los timbres del grupo
+                relatedSchedules.forEach(s => {
+                    const bellBtn = document.querySelector(`.bell-btn[data-bell="${s.bell}"]`);
+                    if (bellBtn) {
+                        bellBtn.classList.add('active');
+                    }
+                });
+            } else {
+                document.getElementById('bellsLabel').textContent = 'Timbre';
+                document.getElementById('bellsHint').style.display = 'none';
+
+                // Seleccionar solo el timbre del horario
+                const bellBtn = document.querySelector(`.bell-btn[data-bell="${schedule.bell}"]`);
+                if (bellBtn) {
+                    bellBtn.classList.add('active');
+                }
             }
 
             document.getElementById('scheduleNameInput').value = schedule.name || '';
@@ -1445,12 +1568,12 @@
                         needsRerender = true;
                     }
 
-                    // Actualizar los toggles individuales de cada timbre
-                    if (data.bells && Array.isArray(data.bells)) {
-                        for (let i = 0; i < 4; i++) {
-                            const bellToggle = document.getElementById(`bell${i}Master`);
-                            if (bellToggle && i < data.bells.length && bellToggle.checked !== data.bells[i]) {
-                                bellToggle.checked = data.bells[i];
+                    // Actualizar los toggles individuales de cada día
+                    if (data.days && Array.isArray(data.days)) {
+                        for (let i = 0; i < 7; i++) {
+                            const dayToggle = document.getElementById(`day${i}Master`);
+                            if (dayToggle && i < data.days.length && dayToggle.checked !== data.days[i]) {
+                                dayToggle.checked = data.days[i];
                                 needsRerender = true;
                             }
                         }

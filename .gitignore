@@ -33,6 +33,8 @@ desktop.ini
 *.elf
 *.hex
 *.bin
+# Excepto los binarios de releases
+!releases/**/*.bin
 
 # Certificados y claves privadas
 *.key
