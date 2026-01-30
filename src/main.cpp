@@ -10,6 +10,7 @@
 #include <LittleFS.h>
 #include <Update.h>
 #include <PubSubClient.h>
+#include <ESPmDNS.h>
 
 // Configuración Access Point
 const char* ap_ssid = "Timbres-Escuela-Config";
@@ -83,6 +84,7 @@ enum WiFiMode { MODE_AP, MODE_STA, MODE_BOTH };
 WiFiMode currentMode = MODE_AP;
 String saved_ssid = "";
 String saved_password = "";
+String hostname = "timbres-tora-or"; // Hostname mDNS por defecto
 unsigned long lastWiFiAttempt = 0;
 unsigned long lastWiFiCheck = 0;
 bool wifiConfigured = false;
@@ -144,6 +146,7 @@ void loadWiFiConfig() {
 
   saved_ssid = doc["ssid"].as<String>();
   saved_password = doc["password"].as<String>();
+  hostname = doc["hostname"] | "timbres-tora-or"; // Cargar hostname o usar default
   wifiConfigured = (saved_ssid.length() > 0);
 
   if (wifiConfigured) {
@@ -155,6 +158,7 @@ void saveWiFiConfig(const String& ssid, const String& password) {
   JsonDocument doc;
   doc["ssid"] = ssid;
   doc["password"] = password;
+  doc["hostname"] = hostname; // Guardar hostname también
 
   File file = LittleFS.open("/wifi.json", "w");
   if (!file) {
@@ -169,7 +173,7 @@ void saveWiFiConfig(const String& ssid, const String& password) {
   saved_password = password;
   wifiConfigured = true;
 
-  Serial.printf("Configuración WiFi guardada: %s\n", ssid.c_str());
+  Serial.printf("Configuración WiFi guardada: %s (hostname: %s)\n", ssid.c_str(), hostname.c_str());
 }
 
 // ============== FUNCIONES MQTT ==============
@@ -244,7 +248,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     if (topicStr == bellTopic) {
       if (message == "ON") {
         activateBell(i);
-        mqttClient.publish((MQTT_BASE_TOPIC + "/bell" + String(i) + "/state").c_str(), "ON", true);
+        mqttClient.publish((MQTT_BASE_TOPIC + "/bell" + String(i) + "/state").c_str(), "ON", false);
       }
       return;
     }
@@ -350,6 +354,16 @@ void cleanOldMQTTDiscovery() {
     delay(50);
   }
 
+  // IMPORTANTE: Limpiar mensajes retenidos de control de timbres (/set y /state)
+  for (int i = 0; i < 4; i++) {
+    String setTopic = MQTT_BASE_TOPIC + "/bell" + String(i) + "/set";
+    String stateTopic = MQTT_BASE_TOPIC + "/bell" + String(i) + "/state";
+    mqttClient.publish(setTopic.c_str(), "", true);
+    delay(50);
+    mqttClient.publish(stateTopic.c_str(), "", true);
+    delay(50);
+  }
+
   // Limpiar sensores timestamp antiguos (si existen)
   for (int i = 0; i < 4; i++) {
     String timestampTopic = "homeassistant/sensor/timbres/bell" + String(i) + "_last_activation/config";
@@ -397,6 +411,9 @@ void publishMQTTDiscovery() {
     doc["payload_press"] = "ON";
     doc["icon"] = "mdi:bell-ring";
     doc["entity_category"] = "config";
+    doc["availability_topic"] = MQTT_BASE_TOPIC + "/status";
+    doc["payload_available"] = "online";
+    doc["payload_not_available"] = "offline";
 
     JsonArray identifiers = doc["device"]["identifiers"].to<JsonArray>();
     identifiers.add("timbres_tora_or");
@@ -431,6 +448,9 @@ void publishMQTTDiscovery() {
   doc["optimistic"] = false;
   doc["retain"] = true;
   doc["icon"] = "mdi:calendar-clock";
+  doc["availability_topic"] = MQTT_BASE_TOPIC + "/status";
+  doc["payload_available"] = "online";
+  doc["payload_not_available"] = "offline";
 
   JsonArray identifiers_sched = doc["device"]["identifiers"].to<JsonArray>();
   identifiers_sched.add("timbres_tora_or");
@@ -472,6 +492,9 @@ void publishMQTTDiscovery() {
     doc["optimistic"] = false;
     doc["retain"] = true;
     doc["icon"] = "mdi:calendar-clock";
+    doc["availability_topic"] = MQTT_BASE_TOPIC + "/status";
+    doc["payload_available"] = "online";
+    doc["payload_not_available"] = "offline";
 
     JsonArray identifiers_day_sched = doc["device"]["identifiers"].to<JsonArray>();
     identifiers_day_sched.add("timbres_tora_or");
@@ -535,6 +558,9 @@ void publishMQTTDiscovery() {
   doc["state_topic"] = MQTT_BASE_TOPIC + "/wifi/ip";
   doc["icon"] = "mdi:ip-network";
   doc["entity_category"] = "diagnostic";
+  doc["availability_topic"] = MQTT_BASE_TOPIC + "/status";
+  doc["payload_available"] = "online";
+  doc["payload_not_available"] = "offline";
 
   JsonArray identifiers4 = doc["device"]["identifiers"].to<JsonArray>();
   identifiers4.add("timbres_tora_or");
@@ -585,12 +611,13 @@ void publishMQTTDiscovery() {
                   bellNames[i].c_str(),
                   published ? "OK" : "FAILED");
 
-    // Publicar estado inicial (OFF)
+    payload = "";
+    delay(200); // Esperar a que Home Assistant procese el discovery
+
+    // Publicar estado inicial (OFF) después del delay
     String activeTopic = MQTT_BASE_TOPIC + "/bell" + String(i) + "/active";
     mqttClient.publish(activeTopic.c_str(), "OFF", true);
-
-    payload = "";
-    delay(100);
+    delay(50);
   }
 
   Serial.println("✅ Auto-descubrimiento publicado exitosamente");
@@ -694,9 +721,9 @@ void publishBellEvent(int bellIndex, const char* event) {
 
   // Actualizar estado
   if (String(event) == "activated") {
-    mqttClient.publish((MQTT_BASE_TOPIC + "/bell" + String(bellIndex) + "/state").c_str(), "ON", true);
+    mqttClient.publish((MQTT_BASE_TOPIC + "/bell" + String(bellIndex) + "/state").c_str(), "ON", false);
   } else if (String(event) == "deactivated") {
-    mqttClient.publish((MQTT_BASE_TOPIC + "/bell" + String(bellIndex) + "/state").c_str(), "OFF", true);
+    mqttClient.publish((MQTT_BASE_TOPIC + "/bell" + String(bellIndex) + "/state").c_str(), "OFF", false);
   }
 }
 
@@ -796,6 +823,14 @@ bool connectToWiFi() {
 
     // Cambiar a modo solo STA después de apagar el AP
     WiFi.mode(WIFI_STA);
+
+    // Inicializar mDNS
+    if (MDNS.begin(hostname.c_str())) {
+      Serial.printf("mDNS iniciado: %s.local\n", hostname.c_str());
+      MDNS.addService("http", "tcp", 80);
+    } else {
+      Serial.println("Error iniciando mDNS");
+    }
 
     return true;
   }
@@ -1594,11 +1629,13 @@ void handleGetWiFiStatus() {
   doc["connected"] = (WiFi.status() == WL_CONNECTED);
   doc["ap_ssid"] = ap_ssid;
   doc["ap_ip"] = WiFi.softAPIP().toString();
+  doc["hostname"] = hostname; // Agregar hostname al status
 
   if (WiFi.status() == WL_CONNECTED) {
     doc["sta_ssid"] = WiFi.SSID();
     doc["sta_ip"] = WiFi.localIP().toString();
     doc["rssi"] = WiFi.RSSI();
+    doc["mdns_url"] = "http://" + hostname + ".local";
   }
 
   if (wifiConfigured) {
@@ -1608,6 +1645,75 @@ void handleGetWiFiStatus() {
   String response;
   serializeJson(doc, response);
   server.send(200, "application/json", response);
+}
+
+void handleGetHostname() {
+  JsonDocument doc;
+  doc["hostname"] = hostname;
+
+  String response;
+  serializeJson(doc, response);
+  server.send(200, "application/json", response);
+}
+
+void handleSaveHostname() {
+  if (!checkAdminAuth()) {
+    return;
+  }
+
+  if (!server.hasArg("plain")) {
+    server.send(400, "text/plain", "No se recibieron datos");
+    return;
+  }
+
+  JsonDocument doc;
+  DeserializationError error = deserializeJson(doc, server.arg("plain"));
+
+  if (error) {
+    server.send(400, "text/plain", "JSON inválido");
+    return;
+  }
+
+  String newHostname = doc["hostname"].as<String>();
+
+  // Validar hostname: solo letras minúsculas, números y guiones
+  // No debe comenzar ni terminar con guión
+  if (newHostname.length() == 0 || newHostname.length() > 63) {
+    server.send(400, "application/json", "{\"success\":false,\"error\":\"Hostname debe tener entre 1 y 63 caracteres\"}");
+    return;
+  }
+
+  for (int i = 0; i < newHostname.length(); i++) {
+    char c = newHostname.charAt(i);
+    if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-')) {
+      server.send(400, "application/json", "{\"success\":false,\"error\":\"Hostname solo puede contener letras minúsculas, números y guiones\"}");
+      return;
+    }
+  }
+
+  if (newHostname.charAt(0) == '-' || newHostname.charAt(newHostname.length() - 1) == '-') {
+    server.send(400, "application/json", "{\"success\":false,\"error\":\"Hostname no puede comenzar ni terminar con guión\"}");
+    return;
+  }
+
+  // Guardar nuevo hostname
+  hostname = newHostname;
+  saveWiFiConfig(saved_ssid, saved_password); // Guardar configuración actualizada
+
+  // Responder antes de reiniciar mDNS
+  server.send(200, "application/json", "{\"success\":true,\"message\":\"Hostname guardado. Reiniciando mDNS...\"}");
+
+  // Reiniciar mDNS con el nuevo hostname
+  delay(500);
+  if (WiFi.status() == WL_CONNECTED) {
+    MDNS.end();
+    if (MDNS.begin(hostname.c_str())) {
+      Serial.printf("mDNS reiniciado: %s.local\n", hostname.c_str());
+      MDNS.addService("http", "tcp", 80);
+    } else {
+      Serial.println("Error reiniciando mDNS");
+    }
+  }
 }
 
 void handleGetSchedules() {
@@ -2184,6 +2290,9 @@ void handleBackup() {
     daySchedulesArray.add(daySchedulesEnabled[i]);
   }
 
+  // Guardar hostname
+  doc["hostname"] = hostname;
+
   String response;
   serializeJson(doc, response);
   server.send(200, "application/json", response);
@@ -2277,6 +2386,25 @@ void handleRestore() {
     }
   }
 
+  // Restaurar hostname
+  if (doc.containsKey("hostname")) {
+    String restoredHostname = doc["hostname"].as<String>();
+    if (restoredHostname.length() > 0 && restoredHostname.length() <= 63) {
+      hostname = restoredHostname;
+      saveWiFiConfig(saved_ssid, saved_password); // Guardar hostname en config
+      Serial.printf("Hostname restaurado: %s\n", hostname.c_str());
+
+      // Reiniciar mDNS con el nuevo hostname si WiFi está conectado
+      if (WiFi.status() == WL_CONNECTED) {
+        MDNS.end();
+        if (MDNS.begin(hostname.c_str())) {
+          Serial.printf("mDNS reiniciado con hostname: %s.local\n", hostname.c_str());
+          MDNS.addService("http", "tcp", 80);
+        }
+      }
+    }
+  }
+
   // Restaurar visibilidad de timbres
   if (doc.containsKey("bellVisibility")) {
     JsonArray visibilityArray = doc["bellVisibility"].as<JsonArray>();
@@ -2326,7 +2454,8 @@ void handleRestore() {
     Serial.println("Configuración MQTT restaurada");
 
     // Marcar para reconectar DESPUÉS de enviar la respuesta HTTP
-    if (mqtt_enabled && mqtt_server.length() > 0 && WiFi.status() == WL_CONNECTED) {
+    // Reconectar si MQTT está habilitado y hay servidor configurado
+    if (mqtt_enabled && mqtt_server.length() > 0) {
       mqttNeedsReconnect = true;
     }
   }
@@ -2364,8 +2493,14 @@ void handleRestore() {
 
   // Reconectar MQTT si es necesario (después de enviar la respuesta)
   if (mqttNeedsReconnect) {
-    mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
-    reconnectMQTT();
+    // Asegurarse de que WiFi esté conectado antes de intentar MQTT
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("Reconectando a servidor MQTT...");
+      mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
+      reconnectMQTT();
+    } else {
+      Serial.println("WiFi no conectado, MQTT se reconectará cuando WiFi esté disponible");
+    }
   }
 }
 
@@ -2787,6 +2922,8 @@ void initWebServer() {
   server.on("/api/wifi/scan", HTTP_GET, handleScanNetworks);
   server.on("/api/wifi/save", HTTP_POST, handleSaveWiFi);
   server.on("/api/wifi/status", HTTP_GET, handleGetWiFiStatus);
+  server.on("/api/hostname", HTTP_GET, handleGetHostname);
+  server.on("/api/hostname", HTTP_POST, handleSaveHostname);
 
   // Rutas para configuración MQTT
   server.on("/api/mqtt/config", HTTP_GET, handleGetMQTT);

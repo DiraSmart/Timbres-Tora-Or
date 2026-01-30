@@ -408,6 +408,34 @@
                 </div>
             </div>
 
+            <!-- Configuración Hostname (mDNS) -->
+            <div class="section">
+                <h2>🏷️ Nombre del Dispositivo (Hostname)</h2>
+                <p style="color: #718096; margin-bottom: 20px;">Configura un nombre único para acceder al dispositivo en la red local usando <strong>http://[hostname].local</strong> sin necesidad de recordar la dirección IP.</p>
+
+                <form id="hostnameForm" onsubmit="saveHostname(event)">
+                    <div class="form-group">
+                        <label>Hostname</label>
+                        <input type="text" id="hostname" placeholder="timbres-tora-or" pattern="[a-z0-9\\-]+" maxlength="63" required>
+                        <div style="color: #718096; font-size: 0.85em; margin-top: 5px;">
+                            Solo letras minúsculas, números y guiones. No puede comenzar ni terminar con guión.<br>
+                            Ejemplo: <strong>timbres-1er-piso</strong> → acceso en <strong>http://timbres-1er-piso.local</strong>
+                        </div>
+                    </div>
+
+                    <div class="controls">
+                        <button type="submit" class="btn btn-success">💾 Guardar Hostname</button>
+                    </div>
+                </form>
+
+                <div id="mdnsInfo" style="background: #edf2f7; padding: 15px; border-radius: 10px; margin-top: 15px; display: none;">
+                    <div style="color: #4a5568; font-size: 0.95em;">
+                        <strong>✅ Acceso mDNS disponible:</strong><br>
+                        <a id="mdnsLink" href="#" target="_blank" style="color: #667eea; font-weight: 600; word-break: break-all;"></a>
+                    </div>
+                </div>
+            </div>
+
             <!-- Configuración MQTT / Home Assistant -->
             <div class="section">
                 <h2>🏠 Integración MQTT / Home Assistant</h2>
@@ -742,6 +770,7 @@
         function initializePage() {
             loadBellNames();
             loadWiFiStatus();
+            loadHostname();
             loadMQTTConfig();
             loadNormalUserInfo();
             loadBellVisibility();
@@ -857,7 +886,11 @@
                 const timeStr = `${String(data.hour).padStart(2, '0')}:${String(data.minute).padStart(2, '0')}:${String(data.second).padStart(2, '0')}`;
                 const dateStr = `${days[data.dayOfWeek]}, ${data.day}/${data.month}/${data.year}`;
 
-                document.getElementById('currentTime').textContent = `${dateStr} - ${timeStr}`;
+                // Mostrar fuente de tiempo (RTC o NTP)
+                const sourceIcon = data.source === 'RTC' ? '🟢' : '🟡';
+                const sourceText = data.source === 'RTC' ? 'RTC' : 'NTP';
+
+                document.getElementById('currentTime').textContent = `${dateStr} - ${timeStr} ${sourceIcon} ${sourceText}`;
             } catch (error) {
                 console.error('Error actualizando hora:', error);
                 document.getElementById('currentTime').textContent = 'Hora no disponible';
@@ -884,6 +917,15 @@
                             <div style="color: #718096; font-size: 0.9em; margin-top: 5px;">IP: ${data.sta_ip} | Señal: ${data.rssi} dBm</div>
                         </div>
                     `;
+
+                    // Mostrar información de mDNS si está disponible
+                    if (data.mdns_url) {
+                        const mdnsInfo = document.getElementById('mdnsInfo');
+                        const mdnsLink = document.getElementById('mdnsLink');
+                        mdnsLink.href = data.mdns_url;
+                        mdnsLink.textContent = data.mdns_url;
+                        mdnsInfo.style.display = 'block';
+                    }
                 } else {
                     wifiStatus.innerHTML = `
                         <div>
@@ -895,6 +937,70 @@
                 }
             } catch (error) {
                 console.error('Error cargando estado WiFi:', error);
+            }
+        }
+
+        async function loadHostname() {
+            try {
+                const response = await fetch('/api/hostname', {
+                    headers: {
+                        'Authorization': getAuthToken()
+                    }
+                });
+                const data = await response.json();
+                document.getElementById('hostname').value = data.hostname;
+            } catch (error) {
+                console.error('Error cargando hostname:', error);
+            }
+        }
+
+        async function saveHostname(event) {
+            event.preventDefault();
+
+            const hostname = document.getElementById('hostname').value.toLowerCase().trim();
+
+            // Validaciones adicionales en frontend
+            if (!hostname) {
+                alert('El hostname no puede estar vacío');
+                return;
+            }
+
+            if (!/^[a-z0-9\-]+$/.test(hostname)) {
+                alert('El hostname solo puede contener letras minúsculas, números y guiones');
+                return;
+            }
+
+            if (hostname.startsWith('-') || hostname.endsWith('-')) {
+                alert('El hostname no puede comenzar ni terminar con guión');
+                return;
+            }
+
+            if (hostname.length > 63) {
+                alert('El hostname no puede tener más de 63 caracteres');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/hostname', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': getAuthToken()
+                    },
+                    body: JSON.stringify({ hostname })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    alert(`✅ ${result.message}\n\nPodrás acceder al dispositivo en:\nhttp://${hostname}.local`);
+                    loadWiFiStatus(); // Recargar para mostrar el nuevo mDNS link
+                } else {
+                    alert(`❌ Error: ${result.error || 'No se pudo guardar el hostname'}`);
+                }
+            } catch (error) {
+                console.error('Error guardando hostname:', error);
+                alert('❌ Error al guardar el hostname');
             }
         }
 

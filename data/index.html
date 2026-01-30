@@ -1264,24 +1264,22 @@
             }
 
             try {
-                // Ordenar de mayor a menor para eliminar desde el final
+                // Ordenar de mayor a menor para eliminar desde el final del array
                 const sortedIds = [...scheduleIds].sort((a, b) => b - a);
 
-                // Eliminar cada horario del grupo
+                // Eliminar cada horario del array local
                 for (const id of sortedIds) {
-                    await fetch(`/api/schedules/${id}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'Authorization': getAuthToken()
-                        }
-                    });
+                    schedules.splice(id, 1);
                 }
 
+                // Guardar el array actualizado
+                await saveAllSchedules();
                 showNotification('Horario eliminado correctamente', 'success');
-                await loadSchedules();
             } catch (error) {
                 showNotification('Error al eliminar horario', 'error');
                 console.error(error);
+                // Recargar horarios en caso de error
+                await loadSchedules();
             }
         }
 
@@ -1410,11 +1408,12 @@
                 JSON.stringify(s.days) === JSON.stringify(schedule.days)
             );
 
-            // Si hay múltiples horarios (grupo), mostrar todos los timbres seleccionados
-            if (relatedSchedules.length > 1) {
-                document.getElementById('bellsLabel').textContent = 'Timbres (selecciona uno o varios)';
-                document.getElementById('bellsHint').style.display = 'block';
+            // Permitir siempre selección múltiple en modo edición
+            document.getElementById('bellsLabel').textContent = 'Timbres (selecciona uno o varios)';
+            document.getElementById('bellsHint').style.display = 'block';
 
+            // Si hay múltiples horarios (grupo), seleccionar todos los timbres del grupo
+            if (relatedSchedules.length > 1) {
                 // Seleccionar todos los timbres del grupo
                 relatedSchedules.forEach(s => {
                     const bellBtn = document.querySelector(`.bell-btn[data-bell="${s.bell}"]`);
@@ -1423,9 +1422,6 @@
                     }
                 });
             } else {
-                document.getElementById('bellsLabel').textContent = 'Timbre';
-                document.getElementById('bellsHint').style.display = 'none';
-
                 // Seleccionar solo el timbre del horario
                 const bellBtn = document.querySelector(`.bell-btn[data-bell="${schedule.bell}"]`);
                 if (bellBtn) {
@@ -1489,16 +1485,37 @@
             }
 
             if (editingScheduleId >= 0) {
-                // Modo edición: actualizar solo el horario existente
-                const schedule = {
-                    name: scheduleName,
-                    enabled: schedules[editingScheduleId].enabled,
-                    hour: hour,
-                    minute: minute,
-                    bell: selectedBells[0], // En modo edición solo se permite un timbre
-                    days: days
-                };
-                schedules[editingScheduleId] = schedule;
+                // Modo edición: eliminar el grupo completo y crear nuevos horarios
+                const originalSchedule = schedules[editingScheduleId];
+
+                // Buscar todos los horarios del mismo grupo (misma hora, minuto, nombre y días)
+                const relatedSchedules = [];
+                schedules.forEach((s, index) => {
+                    if (s.hour === originalSchedule.hour &&
+                        s.minute === originalSchedule.minute &&
+                        s.name === originalSchedule.name &&
+                        JSON.stringify(s.days) === JSON.stringify(originalSchedule.days)) {
+                        relatedSchedules.push(index);
+                    }
+                });
+
+                // Eliminar todos los horarios del grupo (de mayor a menor índice)
+                relatedSchedules.sort((a, b) => b - a).forEach(index => {
+                    schedules.splice(index, 1);
+                });
+
+                // Crear nuevos horarios para cada timbre seleccionado
+                selectedBells.forEach(bell => {
+                    const schedule = {
+                        name: scheduleName,
+                        enabled: originalSchedule.enabled, // Mantener el estado enabled original
+                        hour: hour,
+                        minute: minute,
+                        bell: bell,
+                        days: days
+                    };
+                    schedules.push(schedule);
+                });
             } else {
                 // Modo agregar: crear un horario por cada timbre seleccionado
                 // VALIDACIÓN: Verificar límite de 80 horarios
